@@ -1,0 +1,10 @@
+include LICENSE *.rst *.toml *.yml *.yaml
+graft .github
+
+# Frontend
+recursive-include mlchain/ *.css
+recursive-include mlchain/ *.html
+recursive-include mlchain/ *.woff2
+recursive-include mlchain/ *.ico
+recursive-include mlchain/ *.js
+recursive-include mlchain/ *.png

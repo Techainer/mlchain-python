@@ -1,0 +1,20 @@
+input.md-search__input {
+	padding-left: 3em !important;
+}
+
+pre {
+	border: none;
+}
+
+.md-nav__link--active {
+  border: 2px solid #2196F3;
+  margin-left: -4px;
+  padding: 4px;
+  border-radius: 0.2rem;
+}
+
+img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
