@@ -103,7 +103,16 @@ Now run:
 python main.py
 ```
 
-Now you can access your api at http://localhost:5000
+Now you can access your api at http://localhost:5000. So easy :D
 
 ## Examples
 - Serving MNIST using MLchain: https://github.com/Techainer/mnist-mlchain-examples
+
+## Asking for help
+Welcome to the MLChain community!
+
+If you have any questions, please feel free to:
+1. [Read the docs](https://mlchain.readthedocs.io/en/latest/?)
+2. [Open an issues](https://github.com/Techainer/mlchain-python/issues/new)
+
+We are happy to help
