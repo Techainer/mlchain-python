@@ -1,0 +1,23 @@
+name: mlchain-server # name of service
+version: '0.0.1'
+entry_file: server.py # python file contains object ServeModel
+host: localhost # host service
+port: 8001 # port service
+server: flask # option flask or quart or grpc
+wrapper: None # option None or gunicorn or hypercorn
+cors: true
+static_folder:    # static folder for TemplateResponse
+static_url_path:  # static url path for TemplateResponse
+template_folder:  # template folder for TemplateResponse
+
+gunicorn: # config apm-server if uses gunicorn wrapper
+  timeout: 60
+  keepalive: 60
+  max_requests: 0
+  threads: 1
+  worker_class: 'gthread'
+  umask: '0'
+hypercorn: # config apm-server if uses hypercorn wrapper
+  keep_alive_timeout: 60
+  worker_class: 'asyncio'
+  umask: 0

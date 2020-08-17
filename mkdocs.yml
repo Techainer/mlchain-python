@@ -1,0 +1,120 @@
+site_name: MLChain Documentation
+site_url: https://docs.mlchain.com
+site_author: Techainer Team
+site_description: MLChain is a zero setup Deep Learning platform for productive data science teams.
+# repo_url: https://github.com/techainer/mlchain-python
+theme_dir: 'theme_overrides'
+google_analytics: ['UA-90905407-1', 'mlchain.com']
+pages:
+    - Home: index.md
+    - Deploy Your Model in 1 minute: 0_Quick_Deploy/quick_deploy.md
+    - Features: 1_Features/1_features.md
+
+    - Getting Started:
+        -  'Installation': 2_Getting_Started/1_Installation.md
+        -  'Quick Start': 2_Getting_Started/2_Quick_Start.md
+
+    - Concepts:
+        -  'Server': 3_Concepts/1_Server.md
+        -  'Data Retrieval': 3_Concepts/2_Data_Retrieval.md
+        -  'Workflows': 3_Concepts/3_Workflow.md
+#        -  'Utils': 3_Concepts/4_Utils.md
+#        -  'Advantage': 3_Concepts/5_Advantage.md
+    
+    - Tutorials:
+        -  'Pytorch': 4_Tutorials/1_Pytorch.md
+        -  'Keras': 4_Tutorials/2_Keras.md
+    
+    - Benchmarks: 5_Benchmarks/1_Test.md
+   
+    - Contribution & Support: 6_Contributing_Support/1_How_To_Contribute.md
+    
+    - Roadmap: 7_Roadmap/1_Future_Plan.md
+    
+    - FAQs: 8_FAQs/faq.md
+
+    - Release Notes: 9_Release_Notes/release_notes.md
+
+    # REDIRECTS:
+    # To set up a redirect, add the file you want to redirect from in to the
+    # list below, using this pattern:
+    #
+    # - "": home/using_datasets.md
+    #
+    # Any page with a "" title will not show up in the sidebar. This is a hack
+    # we use to allow old URLs to exist while not showing them in the nav.
+    #
+    # Next, create a file in the location you specified and populate it with
+    # the following, replacing <page> with the page you want to redirect to:
+    #
+    # <meta http-equiv="refresh" content="0;URL='<page>'"></meta>
+    #
+    # {!redirect_message.md!}
+    #
+theme: material
+extra:
+  # Use this to make a section open by default in the sidebar. These names have
+  # to match the titles in the `pages` section above. If a child section is
+  # defaulted to open, but its parent is not, the parent will be closed, but
+  # when you open the parent, the child will be open
+  nav_items_open_by_default:
+    - Projects
+    - Workspace
+    - Jobs
+    - Data
+    - Environments
+    - Output
+    - Get Started
+    - CLI Commands
+  palette:
+    primary: 'cyan'
+    accent: 'cyan'
+    extra:
+  logo: 'img/logo_white.png'
+  font:
+    text: 'Roboto'
+    code: 'Source Code Pro'
+  social:
+    - type: 'linkedin'
+      link: 'https://www.linkedin.com/company/techainer/'
+    - type: 'facebook'
+      link: 'https://www.facebook.com/techainer'
+markdown_extensions:
+    - admonition
+    - codehilite
+    - footnotes
+    - toc(permalink=true)
+    - pymdownx.arithmatex
+    - pymdownx.betterem(smart_enable=all)
+    - pymdownx.caret
+    - pymdownx.critic
+      # - pymdownx.emoji: local changes to the following files would be overwritten by m
+        # emoji_generator: !!python/name:pymdownx.emoji.to_svg
+    - pymdownx.inlinehilite
+    - pymdownx.magiclink
+    - pymdownx.mark
+    - pymdownx.smartsymbols
+    - pymdownx.superfences
+    - pymdownx.tasklist(custom_checkbox=true)
+    - pymdownx.tilde
+    - markdown_include.include:
+        base_path: docs
+
+extra_css:
+    - css/termynal.css
+    - css/custom.css
+    - css/bootstrap_paper.min.css
+    - css/style.css
+extra_javascript:
+    - https://unpkg.com/mermaid@8.4.6/dist/mermaid.min.js
+    - js/termynal.js
+    - js/custom.js
+    # - js/chat.js
+    # - https://sidecar.gitter.im/dist/sidecar.v1.js
+
+copyright: Copyright &copy; 2020 Techainer
+
+# We were having some favicon issues, likely in our theme's code. This is a
+# config setting offered by our theme that fixes the issue
+# https://github.com/squidfunk/mkdocs-material/pull/319
+site_favicon: 'img/logo_short.png'
