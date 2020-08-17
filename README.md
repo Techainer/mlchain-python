@@ -68,7 +68,7 @@ pip install git+https://github.com/Techainer/mlchain-python@master --upgrade
 ```
 
 ## Documentation
-Read ours documentation [here](https://mlchain.ml)
+Read ours documentation [here](https://mlchain.readthedocs.io/en/latest/?)
 
 
 ## Demo
