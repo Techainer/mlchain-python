@@ -44,6 +44,8 @@ to build API that support an end-to-end AI product.
 
 ## Installation
 
+MLChain required Python 3.6 and above
+
 ### PyPI
 To install latest stable version of MLChain, simply run:
 ```bash
@@ -53,12 +55,16 @@ pip install mlchain
 ![](docs/img/README/mlchain.gif)
 
 ### Build from source
-To install latest changes from `master` branch, run the following:
+If you can't wait for the next release, install the most up to date code with from `master` branch by running the following command:
 ```bash
 git clone https://github.com/Techainer/mlchain-python
 cd mlchain-python
 pip install -r requirements.txt
 python setup.py install
+```
+Or simply install using git:
+```bash
+pip install git+https://github.com/Techainer/mlchain-python@master --upgrade
 ```
 
 ## Documentation
@@ -94,10 +100,10 @@ if __name__ == '__main__':
 Now run:
 
 ```bash
-python3 main.py
+python main.py
 ```
 
 Now you can access your api at http://localhost:5000
 
-## Other examples
-- Serving MNIST using mlchain: https://github.com/Techainer/mnist-mlchain-examples
+## Examples
+- Serving MNIST using MLchain: https://github.com/Techainer/mnist-mlchain-examples
