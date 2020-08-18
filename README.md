@@ -74,36 +74,74 @@ Read ours documentation [here](https://mlchain.readthedocs.io/en/latest/?)
 ## Demo
 Here's a minimal example of serving a dummy python class
 
-Create a `main.py` file with:
+Create a `server.py` file:
 
 ```python
+import cv2
+import numpy as np
 from mlchain.base import ServeModel
 
-class Model():
-    def __init__(self):
-        self.ans = 10
 
-    def predict(self):
-        return self.ans
+class Model():
+  """ Just a dummy model """
+
+  def predict(self, image: np.ndarray):
+      """
+      Resize input to 100 by 100.
+      Args:
+          image (numpy.ndarray): An input image.
+      Returns:
+          The image (np.ndarray) at 100 by 100.
+      """
+      image = cv2.resize(image, (100, 100))
+      return image
+
 
 # Define model
 model = Model()
 
 # Serve model
-serve_model = ServeModel(model)`
+serve_model = ServeModel(model)
 
 # Deploy model
 if __name__ == '__main__':
-    from mlchain.rpc.server.flask_server import FlaskServer
-    FlaskServer(serve_model).run(port=5000,threads=12) # Run flask model with upto 12 threads
+    from mlchain.server import FlaskServer
+    # Run flask model with upto 12 threads
+    FlaskServer(serve_model).run(port=5000, threads=12)
 ```
 Now run:
 
 ```bash
-python main.py
+python server.py
 ```
 
-Now you can access your api at http://localhost:5000. So easy :D
+And you should see something like this:
+```console
+[mlchain-logger]:[7895] [2020-08-18 09:53:02 +0700]-[INFO]-[flask_server.py:424]---------------------------------------------------------------------------------
+[mlchain-logger]:[7895] [2020-08-18 09:53:02 +0700]-[INFO]-[flask_server.py:425]-Served model with Flask at host=127.0.0.1, port=5000
+[mlchain-logger]:[7895] [2020-08-18 09:53:02 +0700]-[INFO]-[flask_server.py:426]-Debug = False
+[mlchain-logger]:[7895] [2020-08-18 09:53:02 +0700]-[INFO]-[flask_server.py:427]---------------------------------------------------------------------------------
+```
+
+Now you can access your API at http://localhost:5000
+
+You can open Swagger UI at http://localhost:5000/swagger and try your API out right away
+
+![swagger](docs/img/README/swagger.png)
+
+After explore all your API endpoint over there, create a `client.py` file:
+```python
+import numpy as np
+from mlchain.client import Client
+
+model = Client(api_address='http://localhost:5000').model()
+# Create a dummy input with shape (200, 200)
+input_image = np.ones((200, 200), dtype=np.uint8)
+# Then pass it through our client just like normal Python
+result_image = model.predict(input_image)
+print(result_image.shape)  # And the result should be (100, 100)
+```
+Now you have a supper simple `Client` to work with. Sooo easy :D
 
 ## Examples
 - Serving MNIST using MLchain: https://github.com/Techainer/mnist-mlchain-examples
