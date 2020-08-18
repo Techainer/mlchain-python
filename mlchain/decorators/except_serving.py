@@ -1,3 +1,3 @@
-def except_serving(f):
-    f._MLCHAIN_EXCEPT_SERVING = True
-    return f
+def except_serving(func):
+    func._MLCHAIN_EXCEPT_SERVING = True
+    return func

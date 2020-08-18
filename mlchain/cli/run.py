@@ -1,11 +1,11 @@
-import click
 import os
-from mlchain.base import ServeModel
-from mlchain.server import MLServer
+import click
 import importlib
 import sys
-from mlchain import logger
 import GPUtil
+from mlchain import logger
+from mlchain.server import MLServer
+from mlchain.base import ServeModel
 from mlchain.server.authentication import Authentication
 
 
@@ -83,19 +83,17 @@ op_api_format = click.option('--api_format', '-a', 'api_format', default=None, t
 @op_mode
 @op_api_format
 @click.argument('kws', nargs=-1)
-def run_command(entry_file, host, port, bind, wrapper, server, workers, config, name, mode,
-                api_format, kws):
+def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
+                name, mode, api_format, kws):
     from mlchain import config as mlconfig
     default_config = False
     if config is None:
         default_config = True
         config = 'mlconfig.yaml'
+
     if os.path.isfile(config):
-        if config.endswith('.json'):
-            config = mlconfig.load_json(config)
-        elif config.endswith('.yaml') or config.endswith('.yml'):
-            config = mlconfig.load_yaml(config)
-        else:
+        config = mlconfig.load_file(config)
+        if config is None:
             raise AssertionError("Not support file config {0}".format(config))
     else:
         if not default_config:
@@ -177,20 +175,26 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config, 
                 if isinstance(app, ServeModel):
                     if self.server == 'flask':
                         from mlchain.server.flask_server import FlaskServer
-                        app = FlaskServer(app, name=name, api_format=api_format, version=version,
-                                          authentication=authentication, static_url_path=static_url_path,
-                                          static_folder=static_folder, template_folder=template_folder)
-                        app.register_swagger(host, port)
+                        app = FlaskServer(app, name=name, api_format=api_format,
+                                          version=version,
+                                          authentication=authentication,
+                                          static_url_path=static_url_path,
+                                          static_folder=static_folder,
+                                          template_folder=template_folder)
+                        app.register_swagger()
                         if cors:
                             from flask_cors import CORS
                             CORS(app.app)
                         return app.app
-                    elif self.server == 'quart':
+                    if self.server == 'quart':
                         from mlchain.server.quart_server import QuartServer
-                        app = QuartServer(app, name=name, api_format=api_format, version=version,
-                                          authentication=authentication, static_url_path=static_url_path,
-                                          static_folder=static_folder, template_folder=template_folder)
-                        app.register_swagger(host, port)
+                        app = QuartServer(app, name=name, api_format=api_format,
+                                          version=version,
+                                          authentication=authentication,
+                                          static_url_path=static_url_path,
+                                          static_folder=static_folder,
+                                          template_folder=template_folder)
+                        app.register_swagger()
                         if cors:
                             from quart_cors import cors as CORS
                             CORS(app.app)
@@ -215,9 +219,13 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config, 
     elif wrapper == 'hypercorn' and server == 'quart':
         from mlchain.server.quart_server import QuartServer
         app = get_model(entry_file, serve_model=True)
-        app = QuartServer(app, name=name, version=version, api_format=api_format, authentication=authentication,
-                          static_url_path=static_url_path, static_folder=static_folder, template_folder=template_folder)
-        app.run(host, port, bind=bind, cors=cors, gunicorn=False, hypercorn=True, **config.get('hypercorn', {}))
+        app = QuartServer(app, name=name, version=version, api_format=api_format,
+                          authentication=authentication,
+                          static_url_path=static_url_path,
+                          static_folder=static_folder,
+                          template_folder=template_folder)
+        app.run(host, port, bind=bind, cors=cors,
+                gunicorn=False, hypercorn=True, **config.get('hypercorn', {}))
 
     app = get_model(entry_file)
     if isinstance(app, MLServer):
@@ -232,14 +240,20 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config, 
             server = 'flask'
         if server == 'flask':
             from mlchain.server.flask_server import FlaskServer
-            app = FlaskServer(app, name=name, api_format=api_format, version=version, authentication=authentication,
-                              static_url_path=static_url_path, static_folder=static_folder,
+            app = FlaskServer(app, name=name, api_format=api_format,
+                              version=version,
+                              authentication=authentication,
+                              static_url_path=static_url_path,
+                              static_folder=static_folder,
                               template_folder=template_folder)
             app.run(host, port, cors=cors, gunicorn=False)
         elif server == 'quart':
             from mlchain.server.quart_server import QuartServer
-            app = QuartServer(app, name=name, api_format=api_format, version=version, authentication=authentication,
-                              static_url_path=static_url_path, static_folder=static_folder,
+            app = QuartServer(app, name=name, api_format=api_format,
+                              version=version,
+                              authentication=authentication,
+                              static_url_path=static_url_path,
+                              static_folder=static_folder,
                               template_folder=template_folder)
             app.run(host, port, cors=cors, gunicorn=False, hypercorn=False)
 

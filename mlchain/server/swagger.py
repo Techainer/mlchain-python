@@ -1,15 +1,15 @@
-from inspect import signature,_empty
-from typing import *
+from inspect import signature, _empty
+from typing import List, Dict, Union
 from copy import deepcopy
 import json
-from mlchain import __version__, host
 from werkzeug.datastructures import FileStorage
 import numpy as np
+from mlchain import __version__, HOST
 
 
 class SwaggerTemplate:
-    def __init__(self, server_url='/', tags=None, title='MLChain', description='Swagger',
-                 version=__version__):
+    def __init__(self, server_url='/', tags=None, title='MLChain',
+                 description='Swagger', version=__version__):
         self.template = {
             "openapi": "3.0.0",
             "info": {
@@ -20,16 +20,15 @@ class SwaggerTemplate:
             "servers": [
                 {
                     "url": server_url,
-                    "description": host
+                    "description": HOST
                 }
             ],
             "tags": tags,
             "paths": {}
         }
 
-    def add_endpoint(self, func, endpoint, tags=None, summary='', description='', description_output='',
-                     example_input=None,
-                     example_output=None):
+    def add_endpoint(self, func, endpoint, tags=None, summary='',
+                     description='', description_output=''):
         if not description:
             description = getattr(func, '__doc__', None)
         post_format = {
@@ -109,28 +108,26 @@ type_map = {
 
 def generator_param(func):
     inspect_func_ = signature(func)
-
-    accept_kwargs = "**" in str(inspect_func_)
-    return {k: generate_type(v.annotation, v.default) for k, v in inspect_func_.parameters.items()}
+    return {k: generate_type(v.annotation, v.default)
+            for k, v in inspect_func_.parameters.items()}
 
 
 def generate_type(pytype, default=None):
     if pytype in type_map:
         swagger_type = deepcopy(type_map[pytype])
-        if default is not None and default != _empty :
+        if default is not None and default != _empty:
             swagger_type['default'] = default
         return swagger_type
-    elif pytype in (Dict, dict):
+    if pytype in (Dict, dict):
         return {
             'type': 'object',
             'properties': get_example_dict(default)
         }
-    elif pytype == Union:
+    if pytype == Union:
         return {
             'type': [generate_type(v) for v in pytype.__args__]
         }
-    else:
-        return deepcopy(type_map[type(None)])
+    return deepcopy(type_map[type(None)])
 
 
 def get_example_dict(exmaple):

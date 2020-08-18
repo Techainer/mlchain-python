@@ -1,11 +1,15 @@
 try:
     from gunicorn.app.base import BaseApplication
-except Exception as e:
+except Exception as ex:
     import warnings
-    warnings.warn("Import error {0}".format(e))
+
+    warnings.warn("Import error {0}".format(ex))
+
+
     class BaseApplication(object):
         def __init__(self):
             raise ImportError("Can't import gunicorn. Please set gunicorn = False")
+
 
 class GunicornWrapper(BaseApplication):
     def __init__(self, app, **kwargs):
@@ -22,6 +26,7 @@ class GunicornWrapper(BaseApplication):
     def load(self):
         return self.application
 
+
 class HypercornWrapper:
     def __init__(self, app, **kwargs):
         self.application = app
@@ -34,7 +39,7 @@ class HypercornWrapper:
     def run(self):
         from hypercorn.asyncio import serve
         import asyncio
-        
+
         if 'uvloop' in self.worker_class:
             import uvloop
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -46,6 +51,6 @@ class HypercornWrapper:
             import sys
             if sys.version_info.major == 3 and sys.version_info.minor <= 6:
                 loop = asyncio.get_event_loop()
-                loop.run_until_complete(serve(self.application,self.config))
+                loop.run_until_complete(serve(self.application, self.config))
             else:
                 asyncio.run(serve(self.application, self.config))

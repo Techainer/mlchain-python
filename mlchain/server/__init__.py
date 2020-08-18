@@ -1,22 +1,22 @@
-from .base import MLServer, RawResponse, FileResponse, JsonResponse,TemplateResponse
+from .base import MLServer, RawResponse, FileResponse, JsonResponse, TemplateResponse
 
 try:
     from .flask_server import FlaskServer
-except:
+except Exception as ex:
     import warnings
 
-    warnings.warn("Can't import FlaskServer")
+    warnings.warn("Can't import FlaskServer. {0}".format(ex))
 
 try:
     from .quart_server import QuartServer
-except:
+except Exception as ex:
     import warnings
 
-    warnings.warn("Can't import QuartServer")
+    warnings.warn("Can't import QuartServer. {0}".format(ex))
 
 try:
     from .grpc_server import GrpcServer
-except:
+except Exception as ex:
     import warnings
 
-    warnings.warn("Can't import GrpcServer")
+    warnings.warn("Can't import GrpcServer. {0}".format(ex))

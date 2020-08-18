@@ -18,13 +18,13 @@ class Task:
         self.context = mlchain_context.copy()
 
     def exec(self):
-        if inspect.iscoroutinefunction(self.func_) or (
-                not inspect.isfunction(self.func_) and hasattr(self.func_, '__call__') and inspect.iscoroutinefunction(
-            self.func_.__call__)):
+        if inspect.iscoroutinefunction(self.func_) \
+                or (not inspect.isfunction(self.func_)
+                    and hasattr(self.func_, '__call__')
+                    and inspect.iscoroutinefunction(self.func_.__call__)):
             return trio.run(self.__call__)
-        else:
-            with self:
-                return self.func_(*self.args, **self.kwargs)
+        with self:
+            return self.func_(*self.args, **self.kwargs)
 
     async def exec_async(self):
         return self.__call__()
@@ -33,14 +33,14 @@ class Task:
         """
         Task's process code
         """
-        if inspect.iscoroutinefunction(self.func_) or (
-                not inspect.isfunction(self.func_) and hasattr(self.func_, '__call__') and inspect.iscoroutinefunction(
-            self.func_.__call__)):
+        if inspect.iscoroutinefunction(self.func_) \
+                or (not inspect.isfunction(self.func_)
+                    and hasattr(self.func_, '__call__')
+                    and inspect.iscoroutinefunction(self.func_.__call__)):
             async with self:
                 return await self.func_(*self.args, **self.kwargs)
-        else:
-            with self:
-                return self.func_(*self.args, **self.kwargs)
+        with self:
+            return self.func_(*self.args, **self.kwargs)
 
     async def __aenter__(self):
         return self.__enter__()

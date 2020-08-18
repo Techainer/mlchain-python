@@ -1,14 +1,14 @@
 from mlchain import mlconfig
+from mlchain.base import logger
 from .grpc_client import GrpcClient
 from .http_client import HttpClient
-from mlchain.base import logger
 
 
 class Client(HttpClient, GrpcClient):
     def __init__(self, api_key=None, api_address=None, serializer='json', timeout=5 * 60, headers=None, type='http',
                  name: str = "", version: str = "", check_status=False):
-        logger.warn(
-            "mlchain.client.Client is deprecated and will be remove in the next version. Please use mlchain.client.HttpModel instead")
+        logger.warn("mlchain.client.Client is deprecated and will be remove in the next version. "
+                    "Please use mlchain.client.HttpModel instead")
         assert isinstance(type, str), "type model must be a string"
         self._api_key = api_key
         self._api_address = api_address
@@ -34,7 +34,7 @@ class Client(HttpClient, GrpcClient):
             return HttpClient(api_key=self._api_key, api_address=self._api_address, serializer=self._serializer,
                               timeout=self._timeout, headers=self._headers, name=name, version=version,
                               check_status=check_status)
-        elif self._type.lower() == 'grpc':
+        if self._type.lower() == 'grpc':
             return GrpcClient(api_key=self._api_key, api_address=self._api_address, serializer=self._serializer,
                               timeout=self._timeout, headers=self._headers, name=name, version=version,
                               check_status=check_status)

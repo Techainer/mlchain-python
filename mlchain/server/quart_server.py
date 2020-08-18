@@ -1,30 +1,30 @@
-from mlchain.base.serve_model import ServeModel
-from mlchain.base.log import logger, format_exc
-from quart_cors import cors as CORS
-from quart import Quart, request, Response, jsonify, render_template, Blueprint, send_from_directory, send_file
-from quart.exceptions import RequestEntityTooLarge
-from collections import defaultdict
-from .base import MLServer, Converter, RawResponse, FileResponse, TemplateResponse
-from mlchain.base.wrapper import GunicornWrapper, HypercornWrapper
+import importlib
 import sys
 import inspect
-from quart.datastructures import FileStorage
 import time
-from .format import RawFormat
-import mlchain
-from mlchain.base.exceptions import MlChainError, MLChainAssertionError
-from .swagger import SwaggerTemplate
 import os
+from collections import defaultdict
+from typing import Union
+from quart import Quart, request, Response, jsonify, render_template, Blueprint, send_from_directory, send_file
+from quart.exceptions import RequestEntityTooLarge
+from quart.datastructures import FileStorage
+from quart_cors import cors as CORS
+import mlchain
+from mlchain.base.serve_model import ServeModel
+from mlchain.base.log import logger, format_exc
+from mlchain.base.exceptions import MlChainError
+from mlchain.base.wrapper import GunicornWrapper, HypercornWrapper
+from .base import MLServer, Converter, RawResponse, FileResponse, TemplateResponse
+from .format import RawFormat
+from .swagger import SwaggerTemplate
 from .view import View, ViewAsync
-from typing import *
-import importlib
 
 APP_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(APP_PATH, 'server/templates')
 STATIC_PATH = os.path.join(APP_PATH, 'server/static')
 
 
-class QuartEndpointAction(object):
+class QuartEndpointAction:
     """
     Defines an Quart Endpoint for a specific action for any client.
     """
@@ -85,7 +85,8 @@ class QuartEndpointAction(object):
             else:
                 content_type = 'application/json'
 
-        serializer = self.serializers_dict.get(content_type, self.serializers_dict['application/json'])
+        serializer = self.serializers_dict.get(content_type,
+                                               self.serializers_dict['application/json'])
         if content_type == 'application/msgpack':
             response_function = self.__get_msgpack_response
         elif content_type == 'application/msgpack_blosc':
@@ -116,9 +117,10 @@ class QuartEndpointAction(object):
                 return await response_function(output, 401)
         try:
             # Perform the action
-            if inspect.iscoroutinefunction(self.action) or (not inspect.isfunction(self.action) and hasattr(self.action,
-                                                                                                            '__call__') and inspect.iscoroutinefunction(
-                self.action.__call__)):
+            if inspect.iscoroutinefunction(self.action) \
+                    or (not inspect.isfunction(self.action)
+                        and hasattr(self.action, '__call__')
+                        and inspect.iscoroutinefunction(self.action.__call__)):
                 if request.method == 'POST':
                     output = await self.action(*args, **kwargs, serializer=serializer)
                 else:
@@ -129,13 +131,14 @@ class QuartEndpointAction(object):
                 else:
                     output = self.action(*args, **kwargs)
             if isinstance(output, RawResponse):
-                output = Response(output.response, status=output.status, headers=output.headers,
+                output = Response(output.response, status=output.status,
+                                  headers=output.headers,
                                   mimetype=output.mimetype,
                                   content_type=output.content_type)
                 output.headers['mlchain_version'] = mlchain.__version__
                 output.headers['api_version'] = self.version
                 return output
-            elif isinstance(output, FileResponse):
+            if isinstance(output, FileResponse):
                 file = await send_file(output.path)
                 for k, v in output.headers.items():
                     file.headers[k] = v
@@ -187,8 +190,8 @@ class QuartEndpointAction(object):
 
 
 class QuartView(ViewAsync):
-    def __init__(self, server, format=None, authentication=None):
-        View.__init__(self, server, format, authentication)
+    def __init__(self, server, formatter=None, authentication=None):
+        ViewAsync.__init__(self, server, formatter, authentication)
 
     async def parse_data(self):
         try:
@@ -211,30 +214,32 @@ class QuartView(ViewAsync):
 
     async def make_response(self, response: Union[RawResponse, FileResponse]):
         if isinstance(response, RawResponse):
-            output = Response(response.response, status=response.status, headers=response.headers,
+            output = Response(response.response, status=response.status,
+                              headers=response.headers,
                               mimetype=response.mimetype,
                               content_type=response.content_type)
             output.headers['mlchain_version'] = mlchain.__version__
             output.headers['api_version'] = self.server.version
             return output
-        elif isinstance(response, FileResponse):
+        if isinstance(response, FileResponse):
             file = await send_file(response.path)
             for k, v in response.headers.items():
                 file.headers[k] = v
             file.headers['mlchain_version'] = mlchain.__version__
             file.headers['api_version'] = self.server.version
             return file
-        elif isinstance(response, TemplateResponse):
+        if isinstance(response, TemplateResponse):
             return await render_template(response.template_name, **response.context)
-        else:
-            raise Exception("make response must return RawResponse or FileResponse")
+        raise Exception("make response must return RawResponse or FileResponse")
 
 
 class QuartServer(MLServer):
-    def __init__(self, model: ServeModel, name=None, version='0.0', authentication=None,
-                 api_format=None, static_folder=None, template_folder=None, static_url_path=None):
+    def __init__(self, model: ServeModel, name=None, version='0.0',
+                 authentication=None, api_format=None,
+                 static_folder=None, template_folder=None, static_url_path=None):
         MLServer.__init__(self, model, name)
-        self.app = Quart(self.name, static_folder=static_folder, template_folder=template_folder,
+        self.app = Quart(self.name, static_folder=static_folder,
+                         template_folder=template_folder,
                          static_url_path=static_url_path)
         self.app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
         self.version = version
@@ -252,16 +257,19 @@ class QuartServer(MLServer):
         if isinstance(api_format, type):
             api_format = api_format()
 
-        self.api_format = '{0}.{1}'.format(api_format.__class__.__module__, api_format.__class__.__name__)
-        self.app.add_url_rule('/call/<function_name>', 'call', QuartView(self, api_format, self.authentication),
+        self.api_format = '{0}.{1}'.format(api_format.__class__.__module__,
+                                           api_format.__class__.__name__)
+        self.app.add_url_rule('/call/<function_name>', 'call',
+                              QuartView(self, api_format, self.authentication),
                               methods=['POST', 'GET'])
-        self.app.add_url_rule('/call_raw/<function_name>', 'call_raw', QuartView(self, RawFormat(), self.authentication),
+        self.app.add_url_rule('/call_raw/<function_name>', 'call_raw',
+                              QuartView(self, RawFormat(), self.authentication),
                               methods=['POST', 'GET'])
 
     def register_home(self):
-        home_ui = Blueprint("home",
-                            __name__,
-                            static_folder=STATIC_PATH, template_folder=TEMPLATE_PATH, static_url_path="/home_static")
+        home_ui = Blueprint("home", __name__, static_folder=STATIC_PATH,
+                            template_folder=TEMPLATE_PATH,
+                            static_url_path="/home_static")
 
         @home_ui.route("/", methods=['GET'])
         def home():
@@ -275,7 +283,8 @@ class QuartServer(MLServer):
     def _get_data(self, storage):
         return storage.read()
 
-    def _add_endpoint(self, endpoint=None, endpoint_name=None, handler=None, methods=['GET', 'POST']):
+    def _add_endpoint(self, endpoint=None, endpoint_name=None,
+                      handler=None, methods=['GET', 'POST']):
         """
         Add one endpoint to the flask application. Accept GET, POST and PUT.
         :param endpoint: Callable URL.
@@ -284,26 +293,29 @@ class QuartServer(MLServer):
         :return: Nothing
         """
         self.app.add_url_rule(endpoint, endpoint_name,
-                              QuartEndpointAction(handler, self.serializers_dict,
-                                                  version=self.version, api_keys=None),
+                              QuartEndpointAction(handler,
+                                                  self.serializers_dict,
+                                                  version=self.version,
+                                                  api_keys=None),
                               methods=methods)
 
-    def register_swagger(self, host, port):
-        swagger_ui = Blueprint("swagger",
-                               __name__,
+    def register_swagger(self):
+        swagger_ui = Blueprint("swagger", __name__,
                                static_folder=os.path.join(TEMPLATE_PATH, 'swaggerui'))
 
-        swagger_template = SwaggerTemplate(os.getenv("BASE_PREFIX", '/'), [{'name': self.name}], title=self.name,
-                                           description=self.model.model.__doc__, version=self.model.name)
+        swagger_template = SwaggerTemplate(os.getenv("BASE_PREFIX", '/'),
+                                           [{'name': self.name}],
+                                           title=self.name,
+                                           description=self.model.model.__doc__,
+                                           version=self.model.name)
         for name, func in self.model.get_all_func().items():
             swagger_template.add_endpoint(func, f'/call/{name}', tags=[self.name])
 
         SWAGGER_URL = '/swagger'
-        API_URL = '/swagger_json'
 
         @swagger_ui.route('{0}/'.format(SWAGGER_URL))
         @swagger_ui.route('{0}/<path:path>'.format(SWAGGER_URL))
-        def show(path=None):
+        def swagger_endpoint(path=None):
             if path is None:
                 return send_from_directory(
                     swagger_ui._static_folder,
@@ -321,9 +333,9 @@ class QuartServer(MLServer):
         self.app.register_blueprint(swagger_ui)
 
     def run(self, host='127.0.0.1', port=8080, bind=None,
-            cors=False, cors_allow_origins="*", gunicorn=False, hypercorn=True, debug=False, use_reloader=False,
-            workers=1, timeout=60,
-            keepalive=5, max_requests=0, threads=1, worker_class='asyncio', umask='0', **kwargs):
+            cors=False, cors_allow_origins="*", gunicorn=False, hypercorn=True,
+            debug=False, use_reloader=False, workers=1, timeout=60, keepalive=5,
+            max_requests=0, threads=1, worker_class='asyncio', umask='0', **kwargs):
         """
         Run a server from a Python class
         :model: Your model class
@@ -347,7 +359,8 @@ class QuartServer(MLServer):
         :umask: A bit mask for the file mode on files written by Gunicorn.
         :kwargs: Other Gunicorn options
         """
-        if not ((sys.version_info.major == 3 and sys.version_info.minor >= 6) or sys.version_info.major > 3):
+        if not ((sys.version_info.major == 3 and sys.version_info.minor >= 6)
+                or sys.version_info.major > 3):
             raise Exception("Quart must be use with Python 3.7 or higher")
 
         if not isinstance(bind, list) and not isinstance(bind, str) and bind is not None:
@@ -357,9 +370,9 @@ class QuartServer(MLServer):
         if cors:
             CORS(self.app, allow_origin=cors_allow_origins)
         try:
-            self.register_swagger(host, port)
-        except Exception as e:
-            logger.error("Can't register swagger with error {0}".format(e))
+            self.register_swagger()
+        except Exception as ex:
+            logger.error("Can't register swagger with error {0}".format(ex))
 
         if not gunicorn and not hypercorn:
             if bind is not None:
@@ -390,9 +403,10 @@ class QuartServer(MLServer):
             logger.info("-" * 80)
 
             loglevel = kwargs.get('loglevel', 'warning' if debug else 'info')
-            gunicorn_server = HypercornWrapper(self.app, bind=bind, workers=workers,
-                                               keep_alive_timeout=keepalive, loglevel=loglevel,
-                                               worker_class=worker_class, umask=int(umask), **kwargs).run()
+            HypercornWrapper(self.app, bind=bind, workers=workers,
+                             keep_alive_timeout=keepalive, loglevel=loglevel,
+                             worker_class=worker_class,
+                             umask=int(umask), **kwargs).run()
         else:
             # Process bind, host, port
             if isinstance(bind, str):
@@ -413,6 +427,7 @@ class QuartServer(MLServer):
             logger.info("-" * 80)
 
             loglevel = kwargs.get('loglevel', 'warning' if debug else 'info')
-            gunicorn_server = GunicornWrapper(self.app, bind=bind, workers=workers, timeout=timeout,
-                                              keepalive=keepalive, max_requests=max_requests, loglevel=loglevel,
-                                              threads=threads, worker_class=worker_class, umask=umask, **kwargs).run()
+            GunicornWrapper(self.app, bind=bind, workers=workers, timeout=timeout,
+                            keepalive=keepalive, max_requests=max_requests,
+                            loglevel=loglevel, threads=threads,
+                            worker_class=worker_class, umask=umask, **kwargs).run()

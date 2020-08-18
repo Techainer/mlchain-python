@@ -1,6 +1,7 @@
-from os import environ
 import os
+from os import environ
 from collections import defaultdict
+
 
 class BaseConfig(dict):
     def __init__(self, env_key='', **kwargs):
@@ -54,8 +55,7 @@ class BaseConfig(dict):
             key += '_DEFAULT'
         if key in self:
             return self[key]
-        else:
-            return None
+        return None
 
     def update_default(self, data):
         for k, v in data.items():
@@ -72,9 +72,11 @@ class MLConfig(BaseConfig):
     def __init__(self, *args, **kwargs):
         BaseConfig.__init__(self, *args, **kwargs)
         self.clients = defaultdict(dict)
-    def update_client(self,clients):
-        self.clients.update({k.upper():v for k,v in clients.items()})
-    def load_config(self, path, mode = None):
+
+    def update_client(self, clients):
+        self.clients.update({k.upper(): v for k, v in clients.items()})
+
+    def load_config(self, path, mode=None):
         if isinstance(path, str) and os.path.exists(path):
             if path.endswith('.json'):
                 data = load_json(path)
@@ -99,48 +101,14 @@ class MLConfig(BaseConfig):
                             environ[k] = str(v)
                         self.update(data['mode']['env'][mode])
 
-    def get_client_config(self,name):
+    def get_client_config(self, name):
         name = name.upper()
-        return BaseConfig(env_key='CLIENT_{0}_'.format(name),**self.clients[name])
+        return BaseConfig(env_key='CLIENT_{0}_'.format(name), **self.clients[name])
+
 
 mlconfig = MLConfig(env_key='')
 
 all_configs = [object_storage_config]
-
-
-def artifact(action, data, force=False, names=None):
-    if 'artifact' in data:
-        artifact = data['artifact']
-        from mlchain.storage.object_storage import ObjectStorage
-        for source in artifact:
-            storage = ObjectStorage(bucket=source.get('bucket', None), url=source.get('url', None),
-                                    access_key=source.get('access_key'), secret_key=source.get('secret_key', None),
-                                    provider=source.get('provider', None))
-            for download in source.get('mapping', []):
-                d_remote = download.get('remote', None)
-                d_local = download.get('local', None)
-                d_type = download.get('type', None)
-                bucket = download.get('bucket', None)
-                d_name = download.get('name', None)
-                if d_remote is not None and d_local is not None and d_type is not None \
-                        and (d_name is None or names is None or len(names) == 0 or d_name in names):
-                    if action == 'pull':
-                        if force or not os.path.exists(d_local):
-                            if d_type == 'file':
-                                storage.download_file(d_remote, d_local, bucket)
-                            elif d_type == 'folder':
-                                storage.download_dir(d_remote, d_local, bucket)
-                            else:
-                                raise Exception('artifact type is file or folder')
-                    elif action == 'push':
-                        if d_type == 'file':
-                            storage.upload_file(d_local, d_remote, bucket, overwrite=force)
-                        elif d_type == 'folder':
-                            storage.upload_dir(d_local, d_remote, bucket)
-                        else:
-                            raise Exception('artifact type is file or folder')
-    else:
-        raise Exception("Not found artifact in config")
 
 
 def load_config(data):
@@ -174,6 +142,15 @@ def load_yaml(path):
     return yaml.load(open(path))
 
 
+def load_file(path):
+    if isinstance(path, str) and os.path.exists(path):
+        if path.endswith('.json'):
+            return load_json(path)
+        if path.endswith('.yaml') or path.endswith('.yml'):
+            return load_yaml(path)
+    return None
+
+
 def get_value(value=None, config=None, key=None, default=None):
     if value is not None:
         return value
@@ -183,10 +160,8 @@ def get_value(value=None, config=None, key=None, default=None):
 
 
 def load_from_file(path):
-    if isinstance(path, str) and os.path.exists(path):
-        if path.endswith('.json'):
-            load_config(load_json(path))
-        elif path.endswith('.yaml') or path.endswith('.yml'):
-            load_config(load_yaml(path))
-        else:
-            raise AssertionError("Only support config file is json or yaml")
+    data = load_file(path)
+    if data is not None:
+        load_config(data)
+    else:
+        raise AssertionError("Only support config file is json or yaml")

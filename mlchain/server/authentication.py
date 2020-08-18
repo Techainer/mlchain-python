@@ -5,13 +5,13 @@ from mlchain.base.exceptions import MLChainUnauthorized
 class Authentication:
     def __init__(self, api_keys=None):
         api_keys = api_keys or os.getenv('API_KEYS', None)
-        if isinstance(api_keys,str):
+        if isinstance(api_keys, str):
             api_keys = api_keys.split(';')
         self.api_keys = api_keys
 
     def check(self, headers):
-        if self.api_keys is not None or (
-                isinstance(self.api_keys, (list, dict)) and len(self.api_keys) > 0):
+        if self.api_keys is not None or (isinstance(self.api_keys, (list, dict))
+                                         and len(self.api_keys) > 0):
             authorized = False
             has_key = False
             for key in ['x-api-key', 'apikey', 'apiKey', 'api-key']:

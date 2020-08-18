@@ -1,15 +1,16 @@
-from .base import MLStorage
 import os
-from boto3.session import Session
-from io import BytesIO
-from mlchain.config import object_storage_config
-from mlchain.base.log import logger
-import numpy as np
-import threading
+import glob
 import math
 import sys
-import glob
+from io import BytesIO
+import threading
+from boto3.session import Session
+import numpy as np
+from mlchain import logger
+from mlchain.config import object_storage_config
 from mlchain.base.exceptions import MlChainError
+from .base import MLStorage
+
 cv2 = None
 
 
@@ -17,11 +18,10 @@ def import_cv2():
     if cv2 is None:
         import cv2 as cv
         return cv
-    else:
-        return cv2
+    return cv2
 
 
-class ProgressPercentage(object):
+class ProgressPercentage:
     def __init__(self, filename, filesize):
         self._filename = filename
         self._size = filesize
@@ -33,24 +33,24 @@ class ProgressPercentage(object):
             if (size == 0):
                 return '0B'
             size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-            i = int(math.floor(math.log(size, 1024)))
-            p = math.pow(1024, i)
-            s = round(size / p, 2)
-            return '%.2f %s' % (s, size_name[i])
+            i_name = int(math.floor(math.log(size, 1024)))
+            chunk = math.pow(1024, i_name)
+            size = round(size / chunk, 2)
+            return '%.2f %s' % (size, size_name[i_name])
 
         # To simplify, assume this is hooked up to a single filename
         with self._lock:
             self._seen_so_far += bytes_amount
             percentage = (self._seen_so_far / self._size) * 100
             sys.stdout.write(
-                "\r%s  %s / %s  (%.2f%%)        " % (
-                    self._filename, convertSize(self._seen_so_far), convertSize(self._size),
-                    percentage))
+                "\r%s  %s / %s  (%.2f%%)        " % (self._filename, convertSize(self._seen_so_far),
+                                                     convertSize(self._size), percentage))
             sys.stdout.flush()
 
 
 class ObjectStorage(MLStorage):
-    def __init__(self, bucket=None, client=None, url=None, access_key=None, secret_key=None, provider=None,ping = False):
+    def __init__(self, bucket=None, client=None, url=None,
+                 access_key=None, secret_key=None, provider=None, ping=False):
         MLStorage.__init__(self)
         self.bucket = bucket or object_storage_config.BUCKET
         self._client = client
@@ -61,22 +61,21 @@ class ObjectStorage(MLStorage):
         if ping:
             try:
                 self.client.list_buckets()
-            except Exception as e:
+            except Exception:
                 MlChainError("Can't connect to Object Storage", code="S000", status_code=500)
         if self.bucket:
             try:
                 self.client.create_bucket(Bucket=self.bucket)
-            except Exception as e:
+            except Exception:
                 pass
+
     @property
     def client(self):
         if self._client is None:
             session = Session(
                 aws_access_key_id=self.access_key,
                 aws_secret_access_key=self.secret_key)
-            self._client = session.client(
-                self.provider,
-                endpoint_url=self.url)
+            self._client = session.client(self.provider, endpoint_url=self.url)
         return self._client
 
     def download_file(self, key, local_path, bucket_name=None, use_basename=False):
@@ -91,22 +90,21 @@ class ObjectStorage(MLStorage):
         if not bucket_name:
             bucket_name = self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         local_path = os.path.abspath(local_path)
         if use_basename:
-            local_path = os.path.join(local_path, os.path.basename(key))  # append_basename(local_path, key)
+            local_path = os.path.join(local_path, os.path.basename(key))
         dir_name = os.path.dirname(local_path)
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
         try:
-            self.client.download_file(bucket_name, key, local_path,
-                                      Callback=ProgressPercentage(key,
-                                                                  self.client.head_object(Bucket=bucket_name, Key=key)[
-                                                                      "ContentLength"]))
+            content_length = self.client.head_object(Bucket=bucket_name, Key=key)["ContentLength"]
+            progress = ProgressPercentage(key, content_length)
+            self.client.download_file(bucket_name, key, local_path, Callback=progress)
             return True
-        except Exception as e:
-            logger.error(str(e))
-            raise MlChainError(str(e),code="S001",status_code=500)
+        except Exception as ex:
+            logger.error(str(ex))
+            raise MlChainError(str(ex), code="S001", status_code=500)
 
     def download_bytes(self, key, bucket_name=None, use_basename=True):
         """
@@ -120,14 +118,14 @@ class ObjectStorage(MLStorage):
         if not bucket_name:
             bucket_name = self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         try:
-            f = BytesIO()
-            self.client.download_fileobj(bucket_name, key, f)
-            return f.getvalue()
-        except Exception as e:
-            logger.error(str(e))
-            raise MlChainError(str(e), code="S002", status_code=500)
+            buffer = BytesIO()
+            self.client.download_fileobj(bucket_name, key, buffer)
+            return buffer.getvalue()
+        except Exception as ex:
+            logger.error(str(ex))
+            raise MlChainError(str(ex), code="S002", status_code=500)
 
     def download_cv2(self, key, bucket_name=None):
         """
@@ -141,35 +139,38 @@ class ObjectStorage(MLStorage):
         if not bucket_name:
             bucket_name = self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         try:
-            f = BytesIO()
-            self.client.download_fileobj(bucket_name, key, f)
+            buffer = BytesIO()
+            self.client.download_fileobj(bucket_name, key, buffer)
             cv2 = import_cv2()
             return cv2.imdecode(
-                np.asarray(bytearray(f.getvalue()), dtype="uint8"),
+                np.asarray(bytearray(buffer.getvalue()), dtype="uint8"),
                 cv2.IMREAD_COLOR)
-        except Exception as e:
-            logger.error(str(e))
-            raise MlChainError(str(e), code="S003", status_code=500)
+        except Exception as ex:
+            logger.error(str(ex))
+            raise MlChainError(str(ex), code="S003", status_code=500)
 
     def download_dir(self, prefix, dir_path, bucket_name=None):
         bucket_name = bucket_name or self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         if prefix.endswith('/'):
             prefix = prefix[:-1]
-        if len(prefix)>0:
+        if len(prefix) > 0:
             prefix = '{0}/'.format(prefix)
         try:
             results = self.list(bucket_name=bucket_name, prefix=prefix)
             for file in results['keys']:
-                self.download_file(prefix+file,os.path.join(dir_path,file),bucket_name=bucket_name)
+                self.download_file(prefix + file, os.path.join(dir_path, file),
+                                   bucket_name=bucket_name)
             for dir in results['prefixes']:
-                self.download_dir(prefix + dir,os.path.join(dir_path,dir),bucket_name=bucket_name)
-        except Exception as e:
-            logger.error(str(e))
-            raise MlChainError(str(e), code="S004", status_code=500)
+                self.download_dir(prefix + dir, os.path.join(dir_path, dir),
+                                  bucket_name=bucket_name)
+        except Exception as ex:
+            logger.error(str(ex))
+            raise MlChainError(str(ex), code="S004", status_code=500)
+
     def upload_file(self, filename,
                     key,
                     bucket_name=None,
@@ -194,14 +195,15 @@ class ObjectStorage(MLStorage):
         if not bucket_name:
             bucket_name = self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         if use_basename:
             key = os.path.join(key, os.path.basename(filename))
         try:
             self.client.upload_file(filename, bucket_name, key)
-        except Exception as e:
-            logger.error(str(e))
-            raise MlChainError(str(e), code="S005", status_code=500)
+        except Exception as ex:
+            logger.error(str(ex))
+            raise MlChainError(str(ex), code="S005", status_code=500)
+
     def upload_bytes(self, bytes_data,
                      key,
                      bucket_name=None,
@@ -225,13 +227,14 @@ class ObjectStorage(MLStorage):
         if not bucket_name:
             bucket_name = self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         filelike_buffer = BytesIO(bytes_data)
         try:
             self.client.upload_fileobj(filelike_buffer, bucket_name, key)
-        except Exception as e:
-            logger.info(str(e))
-            raise MlChainError(str(e), code="S006", status_code=500)
+        except Exception as ex:
+            logger.info(str(ex))
+            raise MlChainError(str(ex), code="S006", status_code=500)
+
     def upload_cv2(self, img,
                    key,
                    bucket_name=None,
@@ -256,7 +259,7 @@ class ObjectStorage(MLStorage):
         if not bucket_name:
             bucket_name = self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         try:
             jpg_formats = ['.JPG', '.JPEG']
             png_formats = ['.PNG']
@@ -272,26 +275,28 @@ class ObjectStorage(MLStorage):
             filelike_buffer = BytesIO(buf.tostring())
 
             self.client.upload_fileobj(filelike_buffer, bucket_name, key)
-        except Exception as e:
-            logger.info(str(e))
-            raise MlChainError(str(e), code="S007", status_code=500)
-    def upload_dir(self,dir_path, prefix, bucket_name=None):
+        except Exception as ex:
+            logger.info(str(ex))
+            raise MlChainError(str(ex), code="S007", status_code=500)
+
+    def upload_dir(self, dir_path, prefix, bucket_name=None):
         bucket_name = bucket_name or self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         try:
-            for file in glob.glob(os.path.join(dir_path,'*'),recursive=True):
-                file_name = file[len(dir_path):].replace('\\','/')
+            for file in glob.glob(os.path.join(dir_path, '*'), recursive=True):
+                file_name = file[len(dir_path):].replace('\\', '/')
                 if file_name.startswith('/'):
                     file_name = file_name[1:]
-                key = os.path.join(prefix,file_name).replace('\\','/')
+                key = os.path.join(prefix, file_name).replace('\\', '/')
                 if os.path.isfile(file):
-                    self.upload_file(file,key,bucket_name)
+                    self.upload_file(file, key, bucket_name)
                 else:
-                    self.upload_dir(file,key,bucket_name)
-        except Exception as e:
-            logger.info(str(e))
-            raise MlChainError(str(e), code="S008", status_code=500)
+                    self.upload_dir(file, key, bucket_name)
+        except Exception as ex:
+            logger.info(str(ex))
+            raise MlChainError(str(ex), code="S008", status_code=500)
+
     def list(self,
              bucket_name=None,
              prefix='',
@@ -314,7 +319,7 @@ class ObjectStorage(MLStorage):
         if not bucket_name:
             bucket_name = self.bucket
         if bucket_name is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         config = {
             'PageSize': page_size,
             'MaxItems': max_items,
@@ -351,25 +356,27 @@ class ObjectStorage(MLStorage):
                     results['keys'] += get_keys(page.get('Contents', []))
 
             return results
-        except Exception as e:
-            logger.info(str(e))
-            raise MlChainError(str(e), code="S009", status_code=500)
+        except Exception as ex:
+            logger.info(str(ex))
+            raise MlChainError(str(ex), code="S009", status_code=500)
+
     def listdir(self, path, bucket=None):
         bucket = bucket or self.bucket
         if bucket is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         try:
             results = self.list(bucket_name=bucket, prefix=path)
             return {'files': results['keys'], 'dirs': results['prefixes']}
-        except Exception as e:
-            logger.info(str(e))
-            raise MlChainError(str(e), code="S010", status_code=500)
+        except Exception as ex:
+            logger.info(str(ex))
+            raise MlChainError(str(ex), code="S010", status_code=500)
+
     def delete(self, path, bucket=None):
         bucket = bucket or self.bucket
         if bucket is None:
-            raise MlChainError("bucket can't be None",code="S000",status_code=500)
+            raise MlChainError("bucket can't be None", code="S000", status_code=500)
         try:
             self.client.remove_object(bucket, path)
-        except Exception as e:
-            logger.info(str(e))
-            raise MlChainError(str(e), code="S011", status_code=500)
+        except Exception as ex:
+            logger.info(str(ex))
+            raise MlChainError(str(ex), code="S011", status_code=500)

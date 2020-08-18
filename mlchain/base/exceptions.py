@@ -1,5 +1,5 @@
-from .log import logger
 import traceback
+from .log import logger
 
 
 class MlChainError(Exception):

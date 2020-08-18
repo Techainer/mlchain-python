@@ -1,15 +1,15 @@
+import os
 from inspect import signature
-from typing import *
+from typing import Union
 from copy import deepcopy
 import datetime
+import getpass
 from werkzeug.datastructures import FileStorage
 import numpy as np
-import os
-import getpass
 
 
 class AutofrontendConfig:
-    def __init__(self, server_url='localhost:5000', title='MLChain', description='Autofrontend' ):
+    def __init__(self, title='MLChain', description='Autofrontend'):
         self.id = 0
         self.summary = {
             'id': self.id,
@@ -24,14 +24,15 @@ class AutofrontendConfig:
             }
         }
         self.input_config = {
-            'type':'multi_scenarios'
+            'type': 'multi_scenarios'
         }
         self.input_config['scenarios'] = []
 
         self.output_config = deepcopy(self.input_config)
         self.config = deepcopy(self.input_config)
 
-    def add_endpoint(self, func, endpoint, name=None, description='', output_config=None,sample_url = None):
+    def add_endpoint(self, func, endpoint, name=None, description='',
+                     output_config=None, sample_url=None):
         if not description:
             description = getattr(func, '__doc__', None)
         if sample_url is None:
@@ -66,7 +67,7 @@ class AutofrontendConfig:
         )
         self.output_config['scenarios'].append(
             {
-                'output':output_config
+                'output': output_config
             }
         )
         self.config['scenarios'].append(scenario)
@@ -89,7 +90,8 @@ type_map = {
 def generator_param(func):
     inspect_func_ = signature(func)
 
-    return [generate_type(k, v.annotation, v.default) for k, v in inspect_func_.parameters.items()]
+    return [generate_type(k, v.annotation, v.default)
+            for k, v in inspect_func_.parameters.items()]
 
 
 def generate_type(key, pytype, default=None):
@@ -101,7 +103,8 @@ def generate_type(key, pytype, default=None):
         }
     elif pytype == Union:
         return {
-            'type': [type_map[v] if v in type_map else "text" for v in pytype.__args__],
+            'type': [type_map[v] if v in type_map else "text"
+                     for v in pytype.__args__],
             'label': key.upper(),
             'key': key
         }

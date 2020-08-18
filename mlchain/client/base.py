@@ -1,11 +1,12 @@
 import os
+import time
+import mlchain
+from mlchain import mlchain_context
 from mlchain.base.serializer import (JsonSerializer, MsgpackSerializer,
                                      MsgpackBloscSerializer, JpgMsgpackSerializer, PngMsgpackSerializer, Serializer)
-import mlchain
-import time
-from mlchain.base.log import format_exc, except_handler, logger
-from mlchain import mlchain_context
-from mlchain.server.base import RawResponse,JsonResponse,FileResponse
+from mlchain.base.log import except_handler, logger
+from mlchain.server.base import RawResponse
+
 
 class AsyncStorage:
     def __init__(self, function):
@@ -31,36 +32,34 @@ class AsyncResult:
     def output(self):
         if 'output' in self.response:
             return self.response['output']
-        else:
-            return None
+        return None
 
     @property
     def status(self):
         if 'status' in self.response:
             return self.response['status']
-        else:
-            return None
+        return None
 
     @property
     def time(self):
         if 'time' in self.response:
             return self.response['time']
-        else:
-            return 0
+        return 0
 
     def is_success(self):
         if self.status == 'SUCCESS':
             return True
-        else:
-            return False
+        return False
 
     def json(self):
         return self.response
 
 
 class MLClient:
-    def __init__(self, api_key=None, api_address=None, serializer='msgpack', image_encoder=None, timeout=5*60,
-                 name=None, version='lastest', check_status=False, headers=None, **kwargs):
+    def __init__(self, api_key=None, api_address=None, serializer='msgpack',
+                 image_encoder=None, timeout=5 * 60,
+                 name=None, version='lastest',
+                 check_status=False, headers=None, **kwargs):
         """
         Client to communicate with Mlchain server
         :api_key: Your API KEY
@@ -80,7 +79,7 @@ class MLClient:
             if os.getenv('MLCHAIN_API_ADDRESS') is not None:
                 api_address = os.getenv('MLCHAIN_API_ADDRESS')
             else:
-                api_address = mlchain.api_address
+                api_address = mlchain.API_ADDRESS
         self.api_address = api_address
         self.headers = headers or dict
         self.json_serializer = JsonSerializer()
@@ -114,7 +113,8 @@ class MLClient:
         self.timeout = timeout
 
     def _get_function(self, name):
-        return BaseFunction(client=self, function_name=name, serializer=self.serializer)
+        return BaseFunction(client=self, function_name=name,
+                            serializer=self.serializer)
 
     @property
     def store(self):
@@ -126,36 +126,32 @@ class MLClient:
         if self.all_func_des is not None:
             if name in self.all_func_des:
                 return True
-            else:
-                return False
-        else:
-            return True
+            return False
+        return True
 
     def __check_attribute(self, name):
         if self.all_attributes is not None:
             if name in self.all_attributes:
                 return True
-            else:
-                return False
-        else:
-            return True
+            return False
+        return True
 
     def __getattr__(self, name):
         if name in self._cache:
             return self._cache[name]
-        else:
-            if not self.__check_function(name):
-                if not self.__check_attribute(name) and not name.endswith('_async'):
-                    raise AssertionError("This model has no method or attribute name = {0} or it hasnt been served. The only served is: \n\
-                                            Functions: {1} \n\
-                                            Attributes: {2}".format(name, list(self.all_func_des.keys()),
-                                                                    list(self.all_attributes)))
-                else:
-                    return self._get_function(name=name)()
-            else:
-                true_function = self._get_function(name=name)
-                self._cache[name] = true_function
-                return true_function
+
+        if not self.__check_function(name):
+            if not self.__check_attribute(name) and not name.endswith('_async'):
+                raise AssertionError("This model has no method or attribute name = {0} or it hasnt been served. The only served is: \n\
+                                        Functions: {1} \n\
+                                        Attributes: {2}".format(name,
+                                                                list(self.all_func_des.keys()),
+                                                                list(self.all_attributes)))
+            return self._get_function(name=name)()
+
+        true_function = self._get_function(name=name)
+        self._cache[name] = true_function
+        return true_function
 
     def _post(self, function_name, headers=None, args=None, kwargs=None):
         raise NotImplementedError
@@ -189,15 +185,17 @@ class BaseFunction:
 
     def __call__(self, *args, **kwargs):
         output = self.client.post(function_name=self.function_name, args=args, kwargs=kwargs)
-        if isinstance(output,RawResponse):
+        if isinstance(output, RawResponse):
             return output.value
         output = self.serializer.decode(output)
         if 'error' in output:
             with except_handler():
-                raise Exception("MLCHAIN VERSION: {} API VERSION: {} ERROR_CODE: {} INFO_ERROR: {}, ".format(
-                    output.get('mlchain_version', None), output.get('api_version', None),
-                    output.get('code', None), output['error']))
-        else:
-            logger.debug("MLCHAIN VERSION: {} API VERSION: {}".format(output.get('mlchain_version', None),
-                                                                     output.get('api_version', None)))
-            return output['output']
+                raise Exception(
+                    "MLCHAIN VERSION: {} API VERSION: {} ERROR_CODE: {} INFO_ERROR: {}, ".format(
+                        output.get('mlchain_version', None), output.get('api_version', None),
+                        output.get('code', None), output['error']))
+
+        logger.debug("MLCHAIN VERSION: {} API VERSION: {}".format(
+            output.get('mlchain_version', None),
+            output.get('api_version', None)))
+        return output['output']

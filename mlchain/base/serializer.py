@@ -6,14 +6,16 @@ Git link: https://github.com/lebedov/msgpack-numpy/blob/master/msgpack_numpy.py
 """
 
 import json
-from msgpack import packb, unpackb
-import numpy as np
 import warnings
 import base64
 import sys
-from .exceptions import MLChainSerializationError
+import numpy as np
+from msgpack import packb, unpackb
 from PIL import Image
+from .exceptions import MLChainSerializationError
+
 cv2 = None
+
 
 def import_cv2():
     global cv2
@@ -21,42 +23,67 @@ def import_cv2():
         import cv2 as cv
         cv2 = cv
 
+
 try:
     import blosc
 except:
     blosc = None
     warnings.warn("can't import blosc. Not support MsgpackBloscSerializer")
-    
+
 TYPESIZE = 8 if sys.maxsize > 2 ** 32 else 4
 
 if sys.version_info >= (3, 0):
-    if sys.platform in ['darwin','win32']:
+    if sys.platform in ['darwin', 'win32']:
         ndarray_to_bytes = lambda obj: obj.tobytes()
     else:
         ndarray_to_bytes = lambda obj: obj.data if obj.flags['C_CONTIGUOUS'] else obj.tobytes()
 
     num_to_bytes = lambda obj: obj.data
 
+
     def tostr(x):
         if isinstance(x, bytes):
             return x.decode()
-        else:
-            return str(x)
+        return str(x)
 else:
-    if sys.platform in ['darwin','win32']:
+    if sys.platform in ['darwin', 'win32']:
         ndarray_to_bytes = lambda obj: obj.tobytes()
     else:
         ndarray_to_bytes = lambda obj: memoryview(obj.data) if obj.flags['C_CONTIGUOUS'] else obj.tobytes()
 
     num_to_bytes = lambda obj: memoryview(obj.data)
 
+
     def tostr(x):
         return x
+
 
 class Serializer:
     def __init__(self):
         self._serializers = {}
         self._deserializers = {}
+
+        self.add_serializer(type=bytes, serialize=_serialize_bytes,
+                            deserialize=_deserialize_bytes)
+
+        # Numpy array bool
+        self.add_serializer(type=np.bool_, serialize=lambda obj: bool(obj),
+                            deserialize=lambda obj: np.bool(obj))
+
+        # Numpy array integer
+        for dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
+            self.add_serializer(type=dtype, serialize=lambda obj: int(obj),
+                                deserialize=_get_numpy_deserializer(dtype))
+
+        # Numpy float integer
+        for dtype in [np.float32, np.float64, np.longdouble]:
+            self.add_serializer(type=dtype, serialize=lambda obj: float(obj),
+                                deserialize=_get_numpy_deserializer(dtype))
+
+        self.add_serializer(type=np.generic, serialize=lambda x: float(x),
+                            deserialize=lambda x: x)
+        self.add_serializer(type=Image.Image, serialize=lambda x: [x.mode, x.size, x.tobytes('raw')],
+                            deserialize=lambda x: Image.frombytes(x[0], x[1], [2], decoder_name='raw'))
 
     def encode(self, data):
         """Encode the given *data* and return a :class:`bytes` object."""
@@ -80,7 +107,7 @@ class Serializer:
 
         """
         if type in self._serializers:
-            raise ValueError(
+            warnings.warn(
                 'There is already a serializer for type "{}"'.format(type))
         typeid = len(self._serializers)
         self._serializers[type] = (typeid, serialize)
@@ -97,18 +124,16 @@ class Serializer:
             typeid, serialize = self._serializers[otype]
         except KeyError:
             raise MLChainSerializationError('No serializer found for type "{}"'
-                                     .format(orig_type)) from None
+                                            .format(orig_type)) from None
 
         try:
             # Handle msgpack_numpy 
             encoded = serialize(obj)
             if isinstance(encoded, dict) and (b'nd' in encoded or b'complex' in encoded):
                 return encoded
-            else:
-                return {'__type__': (typeid, encoded)}
-        except Exception as e:
-            raise MLChainSerializationError(
-                'Could not serialize object "{!r}": {}'.format(obj, e)) from e
+            return {'__type__': (typeid, encoded)}
+        except Exception as ex:
+            raise MLChainSerializationError('Could not serialize object "{!r}": {}'.format(obj, ex))
 
     def deserialize_obj(self, obj_repr):
         """Deserialize the original object from *obj_repr*."""
@@ -123,6 +148,7 @@ class Serializer:
 
         return obj_repr
 
+
 def _serialize_ndarray(obj):
     if isinstance(obj, np.ndarray):
         if obj.dtype.kind == 'V':
@@ -136,13 +162,14 @@ def _serialize_ndarray(obj):
                 b'kind': kind,
                 b'shape': obj.shape,
                 b'data': ndarray_to_bytes(obj)}
-    elif isinstance(obj, (np.bool_, np.number)):
+    if isinstance(obj, (np.bool_, np.number)):
         return {b'nd': False,
                 b'type': obj.dtype.str,
                 b'data': num_to_bytes(obj)}
-    elif isinstance(obj, complex):
+    if isinstance(obj, complex):
         return {b'complex': True,
                 b'data': obj.__repr__()}
+
 
 def _serialize_ndarray_json(obj):
     if isinstance(obj, np.ndarray):
@@ -157,19 +184,20 @@ def _serialize_ndarray_json(obj):
                 'kind': kind,
                 'shape': obj.shape,
                 'data': obj.tobytes()}
-    elif isinstance(obj, (np.bool_, np.number)):
+    if isinstance(obj, (np.bool_, np.number)):
         return {'nd': False,
                 'type': obj.dtype.str,
                 'data': num_to_bytes(obj)}
-    elif isinstance(obj, complex):
+    if isinstance(obj, complex):
         return {'complex': True,
                 'data': obj.__repr__()}
+
 
 def _serialize_ndarray_binary(obj, image_enc_type='.png'):
     # Use PNG to keep image the same after sending
     # Use JPG to have smaller size
 
-    if 2<= len(obj.shape) <= 4:
+    if 2 <= len(obj.shape) <= 4:
         try:
             import_cv2()
             return np.array(cv2.imencode(image_enc_type, obj)[1]).tostring()
@@ -178,11 +206,14 @@ def _serialize_ndarray_binary(obj, image_enc_type='.png'):
 
     return _serialize_ndarray(obj)
 
+
 def _serialize_ndarray_png(obj):
     return _serialize_ndarray_binary(obj, image_enc_type=".png")
 
+
 def _serialize_ndarray_jpg(obj):
     return _serialize_ndarray_binary(obj, image_enc_type=".jpg")
+
 
 def _deserialize_ndarray(obj):
     if isinstance(obj, dict):
@@ -192,35 +223,35 @@ def _deserialize_ndarray(obj):
                 # serialized with older versions (#20):
                 if b'kind' in obj and obj[b'kind'] == b'V':
                     descr = [tuple(tostr(t) if type(t) is bytes else t for t in d) \
-                                for d in obj[b'type']]
+                             for d in obj[b'type']]
                 else:
                     descr = obj[b'type']
                 return np.frombuffer(obj[b'data'],
-                            dtype=np.dtype(descr)).reshape(obj[b'shape'])
+                                     dtype=np.dtype(descr)).reshape(obj[b'shape'])
             else:
                 descr = obj[b'type']
                 return np.frombuffer(obj[b'data'],
-                            dtype=np.dtype(descr))[0]
+                                     dtype=np.dtype(descr))[0]
         elif 'nd' in obj:
             if obj['nd'] is True:
                 # Check if b'kind' is in obj to enable decoding of data
                 # serialized with older versions (#20):
                 if 'kind' in obj and obj['kind'] == 'V':
                     descr = [tuple(tostr(t) if type(t) is bytes else t for t in d) \
-                                for d in obj['type']]
+                             for d in obj['type']]
                 else:
                     descr = obj['type']
                 return np.frombuffer(obj['data'],
-                            dtype=np.dtype(descr)).reshape(obj['shape'])
+                                     dtype=np.dtype(descr)).reshape(obj['shape'])
             else:
                 descr = obj['type']
                 return np.frombuffer(obj['data'],
-                            dtype=np.dtype(descr))[0]
+                                     dtype=np.dtype(descr))[0]
         elif b'complex' in obj:
             return complex(tostr(obj[b'data']))
         elif 'complex' in obj:
             return complex(tostr(obj['data']))
-            
+
     if isinstance(obj, np.ndarray):
         return obj
     else:
@@ -228,14 +259,18 @@ def _deserialize_ndarray(obj):
         nparr = np.frombuffer(obj, np.uint8)
         return cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
 
+
 def _serialize_bytes(obj):
     return base64.b64encode(obj).decode('ascii')
+
 
 def _deserialize_bytes(obj):
     return base64.b64decode(obj)
 
+
 def _get_numpy_deserializer(dtype):
     return lambda obj: dtype(obj)
+
 
 class JsonSerializer(Serializer):
     """ 
@@ -244,26 +279,13 @@ class JsonSerializer(Serializer):
 
     def __init__(self):
         super().__init__()
-        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_json, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray_json, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=complex, serialize=_serialize_ndarray_json, deserialize=_deserialize_ndarray)
+        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_json,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray_json,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=complex, serialize=_serialize_ndarray_json,
+                            deserialize=_deserialize_ndarray)
 
-        self.add_serializer(type=bytes, serialize=_serialize_bytes, deserialize=_deserialize_bytes)
-        
-        # Numpy array bool
-        self.add_serializer(type=np.bool_, serialize=lambda obj: bool(obj), deserialize=lambda obj: np.bool(obj))
-
-        # Numpy array integer
-        for dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
-            self.add_serializer(type=dtype, serialize=lambda obj: int(obj), deserialize=_get_numpy_deserializer(dtype))
-
-        # Numpy float integer
-        for dtype in [np.float32, np.float64, np.longdouble]:
-            self.add_serializer(type=dtype, serialize=lambda obj: float(obj), deserialize=_get_numpy_deserializer(dtype))
-
-        self.add_serializer(type = np.generic,serialize=lambda x:float(x),deserialize=lambda x:x)
-        self.add_serializer(type= Image.Image,serialize=lambda x:[x.mode,x.size,x.tobytes('raw')],
-                            deserialize=lambda x:Image.frombytes(x[0],x[1],[2],decoder_name='raw'))
     def encode(self, data):
         return json.dumps(data, default=self.serialize_obj).encode()
 
@@ -282,22 +304,13 @@ class MsgpackSerializer(Serializer):
 
     def __init__(self):
         super().__init__()
-        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=complex, serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        
-        # Numpy array bool
-        self.add_serializer(type=np.bool_, serialize=lambda obj: bool(obj), deserialize=lambda obj: np.bool(obj))
+        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=complex, serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
 
-        # Numpy array integer
-        for dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
-            self.add_serializer(type=dtype, serialize=lambda obj: int(obj), deserialize=_get_numpy_deserializer(dtype))
-
-        # Numpy float integer
-        for dtype in [np.float32, np.float64, np.longdouble]:
-            self.add_serializer(type=dtype, serialize=lambda obj: float(obj), deserialize=_get_numpy_deserializer(dtype))
-        self.add_serializer(type=Image.Image, serialize=lambda x: [x.mode, x.size, x.tobytes('raw')],
-                            deserialize=lambda x: Image.frombytes(x[0], x[1], [2], decoder_name='raw'))
     def encode(self, data):
         return packb(
             data, default=self.serialize_obj, use_bin_type=True)
@@ -308,8 +321,9 @@ class MsgpackSerializer(Serializer):
                 'input': ([], {})
             }
         return unpackb(data,
-                               object_hook=self.deserialize_obj,
-                               use_list=True, raw=False)
+                       object_hook=self.deserialize_obj,
+                       use_list=True, raw=False)
+
 
 class PngMsgpackSerializer(Serializer):
     """ 
@@ -318,20 +332,12 @@ class PngMsgpackSerializer(Serializer):
 
     def __init__(self):
         super().__init__()
-        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_png, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=complex, serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        
-        # Numpy array bool
-        self.add_serializer(type=np.bool_, serialize=lambda obj: bool(obj), deserialize=lambda obj: np.bool(obj))
-
-        # Numpy array integer
-        for dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
-            self.add_serializer(type=dtype, serialize=lambda obj: int(obj), deserialize=_get_numpy_deserializer(dtype))
-
-        # Numpy float integer
-        for dtype in [np.float32, np.float64, np.longdouble]:
-            self.add_serializer(type=dtype, serialize=lambda obj: float(obj), deserialize=_get_numpy_deserializer(dtype))
+        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_png,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=complex, serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
 
     def encode(self, data):
         return packb(
@@ -343,8 +349,9 @@ class PngMsgpackSerializer(Serializer):
                 'input': ([], {})
             }
         return unpackb(data,
-                               object_hook=self.deserialize_obj,
-                               use_list=True, raw=False)
+                       object_hook=self.deserialize_obj,
+                       use_list=True, raw=False)
+
 
 class JpgMsgpackSerializer(Serializer):
     """ 
@@ -353,20 +360,12 @@ class JpgMsgpackSerializer(Serializer):
 
     def __init__(self):
         super().__init__()
-        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_jpg, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=complex, serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        
-        # Numpy array bool
-        self.add_serializer(type=np.bool_, serialize=lambda obj: bool(obj), deserialize=lambda obj: np.bool(obj))
-
-        # Numpy array integer
-        for dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
-            self.add_serializer(type=dtype, serialize=lambda obj: int(obj), deserialize=_get_numpy_deserializer(dtype))
-
-        # Numpy float integer
-        for dtype in [np.float32, np.float64, np.longdouble]:
-            self.add_serializer(type=dtype, serialize=lambda obj: float(obj), deserialize=_get_numpy_deserializer(dtype))
+        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_jpg,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=complex, serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
 
     def encode(self, data):
         return packb(
@@ -378,8 +377,9 @@ class JpgMsgpackSerializer(Serializer):
                 'input': ([], {})
             }
         return unpackb(data,
-                               object_hook=self.deserialize_obj,
-                               use_list=True, raw=False)
+                       object_hook=self.deserialize_obj,
+                       use_list=True, raw=False)
+
 
 class MsgpackBloscSerializer(Serializer):
     """ 
@@ -390,22 +390,13 @@ class MsgpackBloscSerializer(Serializer):
         super().__init__()
         if blosc is None:
             raise ImportError("please install python-blosc to use MsgpackBloscSerializer")
-        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=complex, serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        
-        # Numpy array bool
-        self.add_serializer(type=np.bool_, serialize=lambda obj: bool(obj), deserialize=lambda obj: np.bool(obj))
+        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=complex, serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
 
-        # Numpy array integer
-        for dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
-            self.add_serializer(type=dtype, serialize=lambda obj: int(obj), deserialize=_get_numpy_deserializer(dtype))
-
-        # Numpy float integer
-        for dtype in [np.float32, np.float64, np.longdouble]:
-            self.add_serializer(type=dtype, serialize=lambda obj: float(obj), deserialize=_get_numpy_deserializer(dtype))
-        self.add_serializer(type=Image.Image, serialize=lambda x: [x.mode, x.size, x.tobytes('raw')],
-                            deserialize=lambda x: Image.frombytes(x[0], x[1], [2], decoder_name='raw'))
     def encode(self, data):
         return blosc.compress(packb(
             data, default=self.serialize_obj, use_bin_type=True), TYPESIZE)
@@ -416,8 +407,9 @@ class MsgpackBloscSerializer(Serializer):
                 'input': ([], {})
             }
         return unpackb(blosc.decompress(bytes(data)),
-                               object_hook=self.deserialize_obj,
-                               use_list=True, raw=False)
+                       object_hook=self.deserialize_obj,
+                       use_list=True, raw=False)
+
 
 class JpgMsgpackBloscSerializer(Serializer):
     """ 
@@ -428,20 +420,12 @@ class JpgMsgpackBloscSerializer(Serializer):
         super().__init__()
         if blosc is None:
             raise ImportError("please install python-blosc to use MsgpackBloscSerializer")
-        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_jpg, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=complex, serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        
-        # Numpy array bool
-        self.add_serializer(type=np.bool_, serialize=lambda obj: bool(obj), deserialize=lambda obj: np.bool(obj))
-
-        # Numpy array integer
-        for dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
-            self.add_serializer(type=dtype, serialize=lambda obj: int(obj), deserialize=_get_numpy_deserializer(dtype))
-
-        # Numpy float integer
-        for dtype in [np.float32, np.float64, np.longdouble]:
-            self.add_serializer(type=dtype, serialize=lambda obj: float(obj), deserialize=_get_numpy_deserializer(dtype))
+        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_jpg,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=complex, serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
 
     def encode(self, data):
         return blosc.compress(packb(
@@ -453,8 +437,9 @@ class JpgMsgpackBloscSerializer(Serializer):
                 'input': ([], {})
             }
         return unpackb(blosc.decompress(bytes(data)),
-                               object_hook=self.deserialize_obj,
-                               use_list=True, raw=False)
+                       object_hook=self.deserialize_obj,
+                       use_list=True, raw=False)
+
 
 class PngMsgpackBloscSerializer(Serializer):
     """ 
@@ -465,20 +450,12 @@ class PngMsgpackBloscSerializer(Serializer):
         super().__init__()
         if blosc is None:
             raise ImportError("please install python-blosc to use MsgpackBloscSerializer")
-        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_png, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        self.add_serializer(type=complex, serialize=_serialize_ndarray, deserialize=_deserialize_ndarray)
-        
-        # Numpy array bool
-        self.add_serializer(type=np.bool_, serialize=lambda obj: bool(obj), deserialize=lambda obj: np.bool(obj))
-
-        # Numpy array integer
-        for dtype in [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]:
-            self.add_serializer(type=dtype, serialize=lambda obj: int(obj), deserialize=_get_numpy_deserializer(dtype))
-
-        # Numpy float integer
-        for dtype in [np.float32, np.float64, np.longdouble]:
-            self.add_serializer(type=dtype, serialize=lambda obj: float(obj), deserialize=_get_numpy_deserializer(dtype))
+        self.add_serializer(type=np.ndarray, serialize=_serialize_ndarray_png,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=(np.bool_, np.number), serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
+        self.add_serializer(type=complex, serialize=_serialize_ndarray,
+                            deserialize=_deserialize_ndarray)
 
     def encode(self, data):
         return blosc.compress(packb(
@@ -490,5 +467,5 @@ class PngMsgpackBloscSerializer(Serializer):
                 'input': ([], {})
             }
         return unpackb(blosc.decompress(bytes(data)),
-                               object_hook=self.deserialize_obj,
-                               use_list=True, raw=False)
+                       object_hook=self.deserialize_obj,
+                       use_list=True, raw=False)

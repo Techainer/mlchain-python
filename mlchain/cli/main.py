@@ -3,6 +3,9 @@ from __future__ import print_function
 import platform
 import sys
 import click
+import flask
+import quart
+import grpc
 from .init import init_command
 from .run import run_command
 from .artifact import artifact_command
@@ -14,9 +17,6 @@ def get_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
 
-    import flask
-    import quart
-    import grpc
     message = "Python %(python)s\nMlChain %(mlchain)s\nFlask %(flask)s\nQuart %(quart)s\nGrpc %(grpc)s"
     click.echo(
         message

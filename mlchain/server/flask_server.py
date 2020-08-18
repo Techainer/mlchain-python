@@ -1,22 +1,22 @@
+import importlib
+import os
+import time
+import json
+import re
+from typing import Union
+from werkzeug.datastructures import FileStorage
+from werkzeug.exceptions import RequestEntityTooLarge
+from flask import Flask, request, jsonify, Response, send_file, render_template, Blueprint, send_from_directory
+from flask_cors import CORS
+import mlchain
 from mlchain.base.serve_model import ServeModel
 from mlchain.base.wrapper import GunicornWrapper
 from mlchain.base.log import logger, format_exc
-from mlchain.base.exceptions import MlChainError, MLChainAssertionError
-from flask import Flask, request, jsonify, Response, send_file, render_template, Blueprint, send_from_directory
-from flask_cors import CORS
+from mlchain.base.exceptions import MlChainError
 from .swagger import SwaggerTemplate
 from .autofrontend import AutofrontendConfig
-from .base import MLServer, Converter, RawResponse, FileResponse, JsonResponse, TemplateResponse
-from typing import *
-from werkzeug.datastructures import FileStorage
-from werkzeug.exceptions import RequestEntityTooLarge
-import time
-import json
-import os
-import re
-import mlchain
+from .base import MLServer, Converter, RawResponse, FileResponse, TemplateResponse
 from .format import RawFormat
-import importlib
 from .view import View
 
 APP_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,7 +24,7 @@ TEMPLATE_PATH = os.path.join(APP_PATH, 'server/templates')
 STATIC_PATH = os.path.join(APP_PATH, 'server/static')
 
 
-class FlaskEndpointAction(object):
+class FlaskEndpointAction:
     """
     Defines an Flask Endpoint for a specific action for any client.
     """
@@ -45,26 +45,29 @@ class FlaskEndpointAction(object):
         self.msgpack_blosc_serializer = self.serializers_dict['application/msgpack_blosc']
         self.api_keys = api_keys
 
-    def __get_json_response(self, output, status=200, metadata=None):
+    def __get_json_response(self, output, status=200):
         """
         Get JSON Reponse
         """
         output_encoded = self.json_serializer.encode(output)
-        return Response(output_encoded, mimetype='application/json', status=status)
+        return Response(output_encoded, mimetype='application/json',
+                        status=status)
 
-    def __get_msgpack_response(self, output, status=200, metadata=None):
+    def __get_msgpack_response(self, output, status=200):
         """
         Get msgpack Reponse
         """
         output_encoded = self.msgpack_serializer.encode(output)
-        return Response(output_encoded, mimetype='application/msgpack', status=status)
+        return Response(output_encoded, mimetype='application/msgpack',
+                        status=status)
 
-    def __get_msgpack_blosc_response(self, output, status=200, metadata=None):
+    def __get_msgpack_blosc_response(self, output, status=200):
         """
         Get msgpack blosc response
         """
         output_encoded = self.msgpack_blosc_serializer.encode(output)
-        return Response(output_encoded, mimetype='application/msgpack_blosc', status=status)
+        return Response(output_encoded, mimetype='application/msgpack_blosc',
+                        status=status)
 
     def __call__(self, *args, **kwargs):
         """
@@ -76,15 +79,16 @@ class FlaskEndpointAction(object):
         start_time = time.time()
 
         # If data POST is in msgpack format
-        serializer = self.serializers_dict.get(request.content_type, self.serializers_dict[
-            request.headers.get('serializer', 'application/json')])
+        serializer = self.serializers_dict.get(
+            request.content_type,
+            self.serializers_dict[request.headers.get('serializer', 'application/json')]
+        )
         if request.content_type == 'application/msgpack':
             response_function = self.__get_msgpack_response
         elif request.content_type == 'application/msgpack_blosc':
             response_function = self.__get_msgpack_blosc_response
         else:
             response_function = self.__get_json_response
-        metadata = {}
         if request.method == 'POST' and self.api_keys is not None or (
                 isinstance(self.api_keys, (list, dict)) and len(self.api_keys) > 0):
             authorized = False
@@ -106,21 +110,22 @@ class FlaskEndpointAction(object):
                     'api_version': self.version,
                     'mlchain_version': mlchain.__version__
                 }
-                return response_function(output, 401, metadata)
+                return response_function(output, 401)
         try:
             # Perform the action
             if request.method == 'POST':
-                output = self.action(*args, **kwargs, serializer=serializer, metadata=metadata)
+                output = self.action(*args, **kwargs, serializer=serializer)
             else:
                 output = self.action(*args, **kwargs)
             if isinstance(output, RawResponse):
-                output = Response(output.response, status=output.status, headers=output.headers,
+                output = Response(output.response, status=output.status,
+                                  headers=output.headers,
                                   mimetype=output.mimetype,
                                   content_type=output.content_type)
                 output.headers['mlchain_version'] = mlchain.__version__
                 output.headers['api_version'] = self.version
                 return output
-            elif isinstance(output, FileResponse):
+            if isinstance(output, FileResponse):
                 file = send_file(output.path, mimetype=output.mimetype)
                 for k, v in output.headers.items():
                     file.headers[k] = v
@@ -133,8 +138,7 @@ class FlaskEndpointAction(object):
                 'api_version': self.version,
                 'mlchain_version': mlchain.__version__
             }
-            metadata['status_code'] = 200
-            return response_function(output, 200, metadata)
+            return response_function(output, 200)
         except MlChainError as ex:
             err = ex.msg
             logger.error("code: {0} msg: {1}".format(ex.code, ex.msg))
@@ -146,7 +150,6 @@ class FlaskEndpointAction(object):
                 'api_version': self.version,
                 'mlchain_version': mlchain.__version__
             }
-            metadata['status_code'] = ex.status_code
             return response_function(output, ex.status_code)
         except AssertionError as ex:
             err = str(ex)
@@ -158,9 +161,8 @@ class FlaskEndpointAction(object):
                 'api_version': self.version,
                 'mlchain_version': mlchain.__version__
             }
-            metadata['status_code'] = 422
             return response_function(output, 422)
-        except Exception as ex:
+        except Exception:
             err = str(format_exc(name='mlchain.serve.server'))
             logger.error(err)
 
@@ -170,13 +172,12 @@ class FlaskEndpointAction(object):
                 'api_version': self.version,
                 'mlchain_version': mlchain.__version__
             }
-            metadata['status_code'] = 500
             return response_function(output, 500)
 
 
 class FlaskView(View):
-    def __init__(self, server, format=None, authentication=None):
-        View.__init__(self, server, format, authentication)
+    def __init__(self, server, formatter=None, authentication=None):
+        View.__init__(self, server, formatter, authentication)
 
     def parse_data(self):
         try:
@@ -192,30 +193,32 @@ class FlaskView(View):
 
     def make_response(self, response: Union[RawResponse, FileResponse]):
         if isinstance(response, RawResponse):
-            output = Response(response.response, status=response.status, headers=response.headers,
+            output = Response(response.response, status=response.status,
+                              headers=response.headers,
                               mimetype=response.mimetype,
                               content_type=response.content_type)
             output.headers['mlchain_version'] = mlchain.__version__
             output.headers['api_version'] = self.server.version
             return output
-        elif isinstance(response, FileResponse):
+        if isinstance(response, FileResponse):
             file = send_file(response.path, mimetype=response.mimetype)
             for k, v in response.headers.items():
                 file.headers[k] = v
             file.headers['mlchain_version'] = mlchain.__version__
             file.headers['api_version'] = self.server.version
             return file
-        elif isinstance(response, TemplateResponse):
+        if isinstance(response, TemplateResponse):
             return render_template(response.template_name, **response.context)
-        else:
-            raise Exception("make response must return RawResponse or FileResponse")
+        raise Exception("make response must return RawResponse or FileResponse")
 
 
 class FlaskServer(MLServer):
-    def __init__(self, model: ServeModel, name=None, version='0.0', authentication=None,
-                 api_format=None, static_folder=None, template_folder=None, static_url_path=None):
+    def __init__(self, model: ServeModel, name=None, version='0.0',
+                 authentication=None, api_format=None,
+                 static_folder=None, template_folder=None, static_url_path=None):
         MLServer.__init__(self, model, name)
-        self.app = Flask(self.name, static_folder=static_folder, template_folder=template_folder,
+        self.app = Flask(self.name, static_folder=static_folder,
+                         template_folder=template_folder,
                          static_url_path=static_url_path)
         self.app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
         self.version = version
@@ -233,8 +236,10 @@ class FlaskServer(MLServer):
         if isinstance(api_format, type):
             api_format = api_format()
 
-        self.api_format = '{0}.{1}'.format(api_format.__class__.__module__, api_format.__class__.__name__)
-        self.app.add_url_rule('/call/<function_name>', 'call', FlaskView(self, api_format, self.authentication),
+        self.api_format = '{0}.{1}'.format(api_format.__class__.__module__,
+                                           api_format.__class__.__name__)
+        self.app.add_url_rule('/call/<function_name>', 'call',
+                              FlaskView(self, api_format, self.authentication),
                               methods=['POST', 'GET'])
         self.app.add_url_rule('/call_raw/<function_name>', 'call_raw',
                               FlaskView(self, RawFormat(), self.authentication),
@@ -246,7 +251,8 @@ class FlaskServer(MLServer):
     def _get_data(self, storage):
         return storage.read()
 
-    def _add_endpoint(self, endpoint=None, endpoint_name=None, handler=None, methods=['GET', 'POST']):
+    def _add_endpoint(self, endpoint=None, endpoint_name=None,
+                      handler=None, methods=['GET', 'POST']):
         """
         Add one endpoint to the flask application. Accept GET, POST and PUT.
         :param endpoint: Callable URL.
@@ -255,17 +261,21 @@ class FlaskServer(MLServer):
         :return: Nothing
         """
         self.app.add_url_rule(endpoint, endpoint_name,
-                              FlaskEndpointAction(handler, self.serializers_dict,
-                                                  version=self.version, api_keys=None),
+                              FlaskEndpointAction(handler,
+                                                  self.serializers_dict,
+                                                  version=self.version,
+                                                  api_keys=None),
                               methods=methods)
 
-    def register_swagger(self, host, port):
-        swagger_ui = Blueprint("swagger",
-                               __name__,
+    def register_swagger(self):
+        swagger_ui = Blueprint("swagger", __name__,
                                static_folder=os.path.join(TEMPLATE_PATH, 'swaggerui'))
 
-        swagger_template = SwaggerTemplate(os.getenv("BASE_PREFIX", '/'), [{'name': self.name}], title=self.name,
-                                           description=self.model.model.__doc__, version=self.model.name)
+        swagger_template = SwaggerTemplate(os.getenv("BASE_PREFIX", '/'),
+                                           [{'name': self.name}],
+                                           title=self.name,
+                                           description=self.model.model.__doc__,
+                                           version=self.model.name)
         for name, func in self.model.get_all_func().items():
             swagger_template.add_endpoint(func, f'/call/{name}', tags=[self.name])
 
@@ -273,7 +283,7 @@ class FlaskServer(MLServer):
 
         @swagger_ui.route('{0}/'.format(SWAGGER_URL))
         @swagger_ui.route('{0}/<path:path>'.format(SWAGGER_URL))
-        def show(path=None):
+        def swagger_endpoint(path=None):
             if path is None:
                 return send_from_directory(
                     swagger_ui._static_folder,
@@ -290,10 +300,10 @@ class FlaskServer(MLServer):
 
         self.app.register_blueprint(swagger_ui)
 
-    def register_autofrontend(self, host, port, endpoint=None, mlchain_management=None):
+    def register_autofrontend(self, endpoint=None, mlchain_management=None):
         if endpoint is None:
             endpoint = ''
-        autofrontend_template = AutofrontendConfig(endpoint, title=self.name)
+        autofrontend_template = AutofrontendConfig(title=self.name)
         if self.model.config is not None:
             out_configs = self.model.config
         else:
@@ -316,7 +326,8 @@ class FlaskServer(MLServer):
             else:
                 config = None
                 sample_url = None
-            autofrontend_template.add_endpoint(func, f'{endpoint}/call/{name}', output_config=config,
+            autofrontend_template.add_endpoint(func, f'{endpoint}/call/{name}',
+                                               output_config=config,
                                                sample_url=sample_url)
         if os.path.exists("Readme.md"):
             description = open("Readme.md", encoding='utf-8').read()
@@ -356,14 +367,17 @@ class FlaskServer(MLServer):
             }
             try:
                 import requests
-                r = requests.post(mlchain_management, json=config_version)
+                res = requests.post(mlchain_management, json=config_version)
+                logger.info(str(res.json()))
             except:
                 pass
 
     def register_home(self):
         home_ui = Blueprint("home",
                             __name__,
-                            static_folder=STATIC_PATH, template_folder=TEMPLATE_PATH, static_url_path="/home_static")
+                            static_folder=STATIC_PATH,
+                            template_folder=TEMPLATE_PATH,
+                            static_url_path="/home_static")
 
         @home_ui.route("/", methods=['GET'])
         def home():
@@ -371,11 +385,11 @@ class FlaskServer(MLServer):
 
         self.app.register_blueprint(home_ui)
 
-    def run(self, host='127.0.0.1', port=8080, bind=None, cors=False, cors_resources={}, cors_allow_origins='*',
-            gunicorn=False, debug=False, use_reloader=False,
-            workers=1, timeout=60, keepalive=10, max_requests=0, threads=1, worker_class='gthread', umask='0',
-            endpoint=None, mlchain_management=None,
-            **kwargs):
+    def run(self, host='127.0.0.1', port=8080, bind=None, cors=False, cors_resources={},
+            cors_allow_origins='*', gunicorn=False, debug=False,
+            use_reloader=False, workers=1, timeout=60, keepalive=10,
+            max_requests=0, threads=1, worker_class='gthread', umask='0',
+            endpoint=None, mlchain_management=None, **kwargs):
         """
         Run a server from a Python class
         :model: Your model class
@@ -403,14 +417,14 @@ class FlaskServer(MLServer):
         if cors:
             CORS(self.app, resources=cors_resources, origins=cors_allow_origins)
         try:
-            self.register_swagger(host, port)
-        except Exception as e:
-            logger.error("Can't register swagger with error {0}".format(e))
+            self.register_swagger()
+        except Exception as ex:
+            logger.error("Can't register swagger with error {0}".format(ex))
 
         try:
-            self.register_autofrontend(host, port, endpoint=endpoint, mlchain_management=mlchain_management)
-        except Exception as e:
-            logger.error("Can't register autofrontend with error {0}".format(e))
+            self.register_autofrontend(endpoint=endpoint, mlchain_management=mlchain_management)
+        except Exception as ex:
+            logger.error("Can't register autofrontend with error {0}".format(ex))
         if not gunicorn:
             if bind is not None:
                 if isinstance(bind, str):
@@ -426,7 +440,8 @@ class FlaskServer(MLServer):
             logger.info("Debug = {}".format(debug))
             logger.info("-" * 80)
 
-            self.app.run(host=host, port=port, debug=debug, use_reloader=use_reloader, threaded=threads > 1)
+            self.app.run(host=host, port=port, debug=debug,
+                         use_reloader=use_reloader, threaded=threads > 1)
         else:
             # Process bind, host, port
             if isinstance(bind, str):
@@ -445,6 +460,7 @@ class FlaskServer(MLServer):
             logger.info("-" * 80)
 
             loglevel = kwargs.get('loglevel', 'warning' if debug else 'info')
-            gunicorn_server = GunicornWrapper(self.app, bind=bind, workers=workers, timeout=timeout,
-                                              keepalive=keepalive, max_requests=max_requests, loglevel=loglevel,
-                                              worker_class=worker_class, threads=threads, umask=umask, **kwargs).run()
+            GunicornWrapper(self.app, bind=bind, workers=workers, timeout=timeout,
+                            keepalive=keepalive, max_requests=max_requests,
+                            loglevel=loglevel, worker_class=worker_class,
+                            threads=threads, umask=umask, **kwargs).run()

@@ -2,11 +2,18 @@
 This code is referenced from Floyhub
 https://github.com/Floydhub/floyd-cli
 """
+from contextlib import contextmanager
+import re
+from traceback import StackSummary, extract_tb
 import os
+import sys
 import logging
+import traceback
+
 
 def get_color(n):
     return '\x1b[3{0}m'.format(n)
+
 
 class MultiLine(logging.Formatter):
     def __init__(self, fmt=None, datefmt=None, style='%', newline=None):
@@ -31,19 +38,14 @@ class MultiLine(logging.Formatter):
             result = self.color[levelname] + result + '\x1b[39m'
         return result.strip()
 
+
 hand = logging.StreamHandler()
-hand.setFormatter(MultiLine('[%(name)s]:[%(process)d] [%(asctime)s]-[%(levelname)s]-[%(filename)s:%(lineno)d]-%(message)s',
-                            "%Y-%m-%d %H:%M:%S %z",
-                            newline='[%(name)s]:[%(process)d] [%(asctime)s]-[%(levelname)s] '))
+hand.setFormatter(
+    MultiLine('[%(name)s]:[%(process)d] [%(asctime)s]-[%(levelname)s]-[%(filename)s:%(lineno)d]-%(message)s',
+              "%Y-%m-%d %H:%M:%S %z",
+              newline='[%(name)s]:[%(process)d] [%(asctime)s]-[%(levelname)s] '))
 logging.basicConfig(handlers=[hand], level=logging.getLevelName(os.getenv('LOGLEVEL', 'INFO').upper()))
 logger = logging.getLogger('mlchain-logger')
-
-import traceback
-
-import sys
-from contextlib import contextmanager
-import re
-from traceback import StackSummary, extract_tb
 
 
 def exception_handle(type, value, traceback):
@@ -70,13 +72,10 @@ def format_exc(name='mlchain', tb=None, exception=None):
                     formatted_lines.append(str_item[:-1])
                 else:
                     formatted_lines.append(str_item)
-        formatted_lines += [x for x in re.split('(\\\\n)|(\\n)', str(exception)) if x not in ["\\n", "\n", "", None]]
+        formatted_lines += [x for x in re.split('(\\\\n)|(\\n)', str(exception))
+                            if x not in ["\\n", "\n", "", None]]
 
     output = []
-    kt = True
-    last_mlchain_append = -1
     for x in formatted_lines:
         output.append(x)
     return "\n".join(output) + "\n"
-
-

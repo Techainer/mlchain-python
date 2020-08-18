@@ -13,12 +13,12 @@ jobs:
       before_install:
         - choco install python --version 3.6.8
         - python -m pip install scikit-build
-        - python -m pip install pytest
+        - python -m pip install pytest pylint
       install:
         - python --version
         - python -m pip install .
       script:
-        - pip install pytest
+        - pylint mlchain
         - pytest tests/
       env: PATH=/c/Python36:/c/Python36/Scripts:$PATH
     - name: "Python 3.7.4 on Windows"
@@ -27,12 +27,12 @@ jobs:
       before_install:
         - choco install python --version 3.7.4
         - python -m pip install scikit-build
-        - python -m pip install pytest
+        - python -m pip install pytest pylint
       install:
         - python --version
         - python -m pip install .
       script:
-        - pip install pytest
+        - pylint mlchain
         - pytest tests/
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
 
@@ -42,10 +42,10 @@ before_install:
   - sudo apt-get update
   - sudo apt-get install -y --no-install-recommends build-essential gcc
   - pip install scikit-build
-  - pip install pytest
+  - pip install pytest pylint
 install:
   - python --version
   - pip install .
 script:
-  - pip install pytest
+  - pylint
   - pytest tests/

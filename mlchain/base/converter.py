@@ -1,13 +1,13 @@
-import json
-from PIL import Image, ImageSequence
-import io
-import numpy as np
-from mlchain.base.exceptions import MLChainAssertionError
 import os
-from typing import *
+import io
+import json
+from base64 import b64decode
+from typing import List, Union, Dict, Set
 from inspect import signature, _empty
 from collections import defaultdict
-from base64 import b64decode
+import numpy as np
+from PIL import Image, ImageSequence
+from mlchain.base.exceptions import MLChainAssertionError
 
 cv2 = None
 ALL_LOWER_TRUE = ["true", "yes", "yeah", "y"]
@@ -23,7 +23,7 @@ def import_cv2():
 def str2ndarray(value: str) -> np.ndarray:
     if value.lower() in ['none', 'null', 'nil']:
         return None
-    elif value[0:4] == 'http':
+    if value[0:4] == 'http':
         from mlchain.base.utils import is_image_url_and_ready
         # If it is a url image
         if is_image_url_and_ready(value):
@@ -31,10 +31,10 @@ def str2ndarray(value: str) -> np.ndarray:
             return read_image_from_url_cv2(value)
         else:
             raise MLChainAssertionError("Image url is not valid")
-    elif os.path.exists(value):
+    if os.path.exists(value):
         import_cv2()
         return cv2.imread(value)
-    elif value.startswith('data:image/') and 'base64' in value:
+    if value.startswith('data:image/') and 'base64' in value:
         import_cv2()
         content = value[value.index('base64') + 7:]
         nparr = np.fromstring(b64decode(content), np.uint8)
@@ -43,33 +43,33 @@ def str2ndarray(value: str) -> np.ndarray:
             return img
         else:
             raise MLChainAssertionError("Can't decode base64 {0} to ndarray".format(value))
-    else:
-        try:
-            d = json.loads(value)
-            if isinstance(d, list):
-                return np.array(d)
-        except:
-            pass
-        import_cv2()
-        # If it is a base64 encoded array
-        try:
-            nparr = np.fromstring(b64decode(value), np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_ANYCOLOR)
-            if img is not None:
-                return img
-        except:
-            pass
 
-        try:
-            # If it is a string array
-            import ast
-            arr = np.array(ast.literal_eval(value))
-            if arr is not None:
-                return arr
-        except:
-            raise MLChainAssertionError("There's no way to convert to numpy array with variable {}".format(value))
-        raise MLChainAssertionError("Can't convert {0} to ndarray".format(value))
-    return value
+    try:
+        d = json.loads(value)
+        if isinstance(d, list):
+            return np.array(d)
+    except:
+        pass
+    import_cv2()
+    # If it is a base64 encoded array
+    try:
+        nparr = np.fromstring(b64decode(value), np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_ANYCOLOR)
+        if img is not None:
+            return img
+    except:
+        pass
+
+    try:
+        # If it is a string array
+        import ast
+        arr = np.array(ast.literal_eval(value))
+        if arr is not None:
+            return arr
+    except:
+        raise MLChainAssertionError(
+            "There's no way to convert to numpy array with variable {}".format(value))
+    raise MLChainAssertionError("Can't convert {0} to ndarray".format(value))
 
 
 def list2ndarray(value: list) -> np.ndarray:
@@ -165,9 +165,29 @@ def storage2str(filename, value) -> str:
     return value.decode()
 
 
+def get_type(t):
+    if t == List:
+        return list, None
+    elif t == Dict:
+        return dict, None
+    elif t == Set:
+        return set, None
+    elif isinstance(t, (tuple, list)):
+        return Union, tuple(t)
+    if getattr(t, '__origin__', None) is None:
+        return t, None
+    else:
+        return t.__origin__, t.__args__
+
+
 class Converter:
     convert_dict = defaultdict(dict)
     file_converters = {}
+    map_type = {
+        List: list,
+        Dict: dict,
+        Set: set
+    }
 
     def __init__(self, file_storage_type=None, get_file_name=None, get_data=None):
         self.FILE_STORAGE_TYPE = file_storage_type
@@ -229,7 +249,8 @@ class Converter:
         for (k, o), converter in self.file_converters.items():
             if (ext in k or '*' in k) and (out_type == o or o in out_type):
                 return converter(file_name, data)
-        raise MLChainAssertionError("Not found convert file {0} to {1}".format(file_name, out_type))
+        raise MLChainAssertionError(
+            "Not found convert file {0} to {1}".format(file_name, out_type))
 
     def convert(self, value, out_type):
         '''
@@ -238,55 +259,54 @@ class Converter:
         :param out_type:
         :return:
         '''
-        if out_type == _empty:
+        origin, args = get_type(out_type)
+        if origin == _empty:
             return value
-        if getattr(out_type, '__origin__', None) in [List, Set, Dict, list, set,
-                                                     dict] and out_type.__origin__ is not None:
+        if origin in [List, Set, Dict, list, set, dict] and args is not None:
             if isinstance(value, (List, list)):
-                if out_type.__origin__ in [List, list]:
-                    return [self.convert(v, out_type.__args__) for v in value]
-                elif out_type.__origin__ in [Set, set]:
-                    return set(self.convert(v, out_type.__args__) for v in value)
+                if origin in [List, list]:
+                    return [self.convert(v, args) for v in value]
+                if origin in [Set, set]:
+                    return set(self.convert(v, args) for v in value)
             elif isinstance(value, (Dict, dict)):
-                if out_type.__origin__ in [Dict, list]:
-                    args = out_type.__args__
+                if origin in [Dict, list]:
                     if len(args) == 2:
-                        return {self.convert(k, args[0]): self.convert(v, args[1]) for k, v in value.items()}
-                    elif len(args) == 1:
+                        return {self.convert(k, args[0]): self.convert(v, args[1])
+                                for k, v in value.items()}
+                    if len(args) == 1:
                         return {k: self.convert(v, args[0]) for k, v in value.items()}
             else:
                 if type(value) == self.FILE_STORAGE_TYPE:
-                    return self.convert_file(self._get_file_name(value), self._get_data(value), out_type)
-                if out_type.__origin__ in [List, list]:
-                    return [self.convert(value, out_type.__args__)]
-                elif out_type.__origin__ in [Set, set]:
-                    return {self.convert(value, out_type.__args__)}
-                else:
-                    raise MLChainAssertionError("Can't convert value {0} to {1}".format(value, out_type),
-                                                code="convert")
+                    return self.convert_file(self._get_file_name(value),
+                                             self._get_data(value), out_type)
+                if origin in [List, list]:
+                    return [self.convert(value, args)]
+                if origin in [Set, set]:
+                    return {self.convert(value, args)}
+                raise MLChainAssertionError(
+                    "Can't convert value {0} to {1}".format(value, out_type),
+                    code="convert")
         else:
             try:
                 if isinstance(value, out_type):
                     return value
             except:
                 pass
-        out_type = Union[out_type]
-        if out_type == Union:
-            out_type = out_type.__args__
+        if origin == Union:
+            out_type = args
         else:
             out_type = (out_type,)
         if type(value) in out_type:
             return value
-        else:
-            for i_type in self.convert_dict:
-                if isinstance(value, i_type):
-                    for o_type in self.convert_dict[i_type]:
-                        if o_type in out_type:
-                            return self.convert_dict[i_type][o_type](value)
+
+        for i_type in self.convert_dict:
+            if isinstance(value, i_type):
+                for o_type in self.convert_dict[i_type]:
+                    if o_type in out_type:
+                        return self.convert_dict[i_type][o_type](value)
         if type(value) == self.FILE_STORAGE_TYPE:
             return self.convert_file(self._get_file_name(value), self._get_data(value), out_type)
         raise MLChainAssertionError("Not found converter from {0} to {1}".format(type(value), out_type))
-        return value
 
 
 Converter.add_convert(lambda x: str(x), int, str)
@@ -301,11 +321,18 @@ Converter.add_convert(str2list, str, list)
 Converter.add_convert(str2list, str, List)
 Converter.add_convert(str2dict, str, Dict)
 Converter.add_convert(str2dict, str, dict)
-Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras', cv2imread, output_type=np.ndarray)
-Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras', cv2imread_to_list,
+Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras',
+                           cv2imread,
+                           output_type=np.ndarray)
+Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras',
+                           cv2imread_to_list,
                            output_type=List[np.ndarray])
-Converter.add_convert_file('tif,tiff', pilimread_one_img, output_type=np.ndarray)
-Converter.add_convert_file('tif,tiff', pilimread_list_img, output_type=List[np.ndarray])
+Converter.add_convert_file('tif,tiff',
+                           pilimread_one_img,
+                           output_type=np.ndarray)
+Converter.add_convert_file('tif,tiff',
+                           pilimread_list_img,
+                           output_type=List[np.ndarray])
 Converter.add_convert_file('*', storage2bytes, output_type=bytes)
 Converter.add_convert_file('json', storage2json, output_type=dict)
 Converter.add_convert_file('txt', storage2str, output_type=str)
@@ -316,7 +343,8 @@ def pilimread(filename, img_bytes) -> Image.Image:
         im = Image.open(io.BytesIO(img_bytes))
         return im
     except Exception as e:
-        raise MLChainAssertionError("Can't convert file {0} to PIL Image. Error: {1}".format(filename, e))
+        raise MLChainAssertionError(
+            "Can't convert file {0} to PIL Image. Error: {1}".format(filename, e))
 
 
 def pilimread_list(filename, img_bytes) -> List[Image.Image]:
@@ -331,44 +359,51 @@ def pilimread_list(filename, img_bytes) -> List[Image.Image]:
 def str2pil(value: str) -> Image.Image:
     if value.lower() in ['none', 'null', 'nil']:
         return None
-    elif value[0:4] == 'http':
+    if value[0:4] == 'http':
         from mlchain.base.utils import is_image_url_and_ready
         # If it is a url image
         if is_image_url_and_ready(value):
             from mlchain.base.utils import read_image_from_url_pil
             return read_image_from_url_pil(value)
-        else:
-            raise MLChainAssertionError("Image url is not valid")
-    elif os.path.exists(value):
-        return Image.open(open(value,'rb'))
-    elif value.startswith('data:image/') and 'base64' in value:
+        raise MLChainAssertionError("Image url is not valid")
+    if os.path.exists(value):
+        return Image.open(open(value, 'rb'))
+    if value.startswith('data:image/') and 'base64' in value:
 
         content = value[value.index('base64') + 7:]
         try:
             data = io.BytesIO(b64decode(content))
             return Image.open(data)
         except:
-            raise MLChainAssertionError("Can't decode base64 {0} to PIL Image".format(value))
-    else:
+            raise MLChainAssertionError(
+                "Can't decode base64 {0} to PIL Image".format(value))
+
         # If it is a base64 encoded array
-        try:
-            data = io.BytesIO(b64decode(value))
-            return Image.open(data)
-        except:
-            pass
+    try:
+        data = io.BytesIO(b64decode(value))
+        return Image.open(data)
+    except:
+        pass
 
-        try:
-            # If it is a string array
-            import ast
-            return Image.fromarray(ast.literal_eval(value))
-        except:
-            raise MLChainAssertionError("There's no way to convert to PIL Image with variable {}".format(value))
-        raise MLChainAssertionError("Can't convert {0} to PIL Image".format(value))
-    return value
+    try:
+        # If it is a string array
+        import ast
+        return Image.fromarray(ast.literal_eval(value))
+    except:
+        raise MLChainAssertionError(
+            "There's no way to convert to PIL Image with variable {}".format(value))
 
-Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras', pilimread, output_type=Image.Image)
-Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras', lambda a, b: [pilimread(a, b)],
+
+Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras',
+                           pilimread,
+                           output_type=Image.Image)
+Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras',
+                           lambda a, b: [pilimread(a, b)],
                            output_type=List[Image.Image])
-Converter.add_convert_file('tif,tiff', lambda a, b: pilimread_list(a, b)[0], output_type=Image.Image)
-Converter.add_convert_file('tif,tiff', pilimread_list, output_type=List[Image.Image])
-Converter.add_convert(str2pil,in_type=str,out_type=Image.Image)
+Converter.add_convert_file('tif,tiff',
+                           lambda a, b: pilimread_list(a, b)[0],
+                           output_type=Image.Image)
+Converter.add_convert_file('tif,tiff',
+                           pilimread_list,
+                           output_type=List[Image.Image])
+Converter.add_convert(str2pil, in_type=str, out_type=Image.Image)

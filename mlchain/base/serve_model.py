@@ -1,11 +1,11 @@
 from inspect import signature
 import inspect
-import time
-from .exceptions import MlChainError
 from threading import Lock, Event
 import itertools
 import types
-from mlchain import mlchain_context
+from mlchain.context import mlchain_context
+from .exceptions import MlChainError
+
 
 def non_thread(timeout=-1):
     if timeout is None or (isinstance(timeout, (float, int)) and timeout <= 0):
@@ -36,9 +36,8 @@ def non_thread(timeout=-1):
     return wrapper
 
 
-def get_single_funcion(batch_func, variables, variable_names=None, default=None, timeout=-1, name='single_func',
-                       max_queue=100,
-                       max_batch_size=32):
+def get_single_funcion(batch_func, variables, variable_names=None, default=None, timeout=-1,
+                       name='single_func', max_queue=100, max_batch_size=32):
     if timeout is None or (isinstance(timeout, (float, int)) and timeout <= 0):
         timeout = -1
     else:
@@ -79,8 +78,8 @@ def get_single_funcion(batch_func, variables, variable_names=None, default=None,
                     outputs = batch_func(**kwargs, **default)
                 except Exception as e:
                     outputs = [str(e)] * len(ids)
-                for done, id, output in zip(done_events, ids, outputs):
-                    result[id] = output
+                for done, uid, output in zip(done_events, ids, outputs):
+                    result[uid] = output
                     done.set()
             for i in range(pivot):
                 queue.pop(0)
@@ -89,30 +88,30 @@ def get_single_funcion(batch_func, variables, variable_names=None, default=None,
         if len(queue) > max_queue:
             raise MlChainError("Serve busy", code="T003", status_code=429)
         assert len(args) + len(kwargs) == len(arg_names)
-        e = Event()
-        id = next(job_counter)
-        params = {**{v: arg for v, arg in zip(arg_names, args)}, **kwargs, 'id__': id, 'done__': e}
+        event = Event()
+        uid = next(job_counter)
+        params = {**{v: arg for v, arg in zip(arg_names, args)}, **kwargs,
+                  'id__': uid, 'done__': event}
         queue.append(params)
 
         acquire = lock.acquire(timeout=timeout)
         if acquire:
             try:
-                if not e.is_set():
+                if not event.is_set():
                     handler()
-            except Exception as e:
+            except Exception as ex:
                 lock.release()
-                raise e
+                raise ex
             lock.release()
         else:
             lock.release()
             raise MlChainError("Timeout batch", code="T002", status_code=408)
 
-        if not e.wait(timeout):
+        if not event.wait(timeout):
             raise MlChainError("Timeout batch", code="T002", status_code=408)
-        if id in result:
-            return result.pop(id)
-        else:
-            raise MlChainError("Timeout batch", code="T002", status_code=408)
+        if uid in result:
+            return result.pop(uid)
+        raise MlChainError("Timeout batch", code="T002", status_code=408)
 
     if self:
         wrapper = eval('lambda self,{0}: 0'.format(', '.join(arg_names)))
@@ -130,7 +129,8 @@ def get_single_funcion(batch_func, variables, variable_names=None, default=None,
     return f
 
 
-def batch(name, variables, default=None, variable_names=None, timeout=-1, max_queue=100, max_batch_size=32):
+def batch(name, variables, default=None, variable_names=None, timeout=-1,
+          max_queue=100, max_batch_size=32):
     def wrapper(f):
         f.__BATCH_CONFIG__ = {
             'name': name,
@@ -146,8 +146,9 @@ def batch(name, variables, default=None, variable_names=None, timeout=-1, max_qu
     return wrapper
 
 
-class ServeModel(object):
-    def __init__(self, model, name=None, deny_all_function=False, blacklist=[], whitelist=[], config=None):
+class ServeModel:
+    def __init__(self, model, name=None, deny_all_function=False,
+                 blacklist=[], whitelist=[], config=None):
         if isinstance(model, type):
             raise AssertionError("Your input model must be an instance")
 
@@ -173,7 +174,9 @@ class ServeModel(object):
             for name in dir(self.model):
                 attr = getattr(self.model, name)
 
-                if not name.startswith("__") and (getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) or name in blacklist):
+                if not name.startswith("__") \
+                        and (getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False)
+                             or name in blacklist):
                     output.append(name)
         return output
 
@@ -186,14 +189,16 @@ class ServeModel(object):
         for name in dir(self.model):
             attr = getattr(self.model, name)
 
-            if (not name.startswith("__") or name == '__call__') and callable(attr) and name not in blacklist_set:
+            if (not name.startswith("__") or name == '__call__') \
+                    and callable(attr) and name not in blacklist_set:
                 self.all_serve_function.add(name)
                 batch_config = getattr(attr, '__BATCH_CONFIG__', None)
                 if batch_config:
                     single_func = get_single_funcion(attr, variables=batch_config['variables'],
                                                      default=batch_config['default'],
                                                      variable_names=batch_config['variable_names'],
-                                                     timeout=batch_config['timeout'], name=batch_config['name'],
+                                                     timeout=batch_config['timeout'],
+                                                     name=batch_config['name'],
                                                      max_queue=batch_config['max_queue'],
                                                      max_batch_size=batch_config['max_batch_size'])
                     setattr(self.model, batch_config['name'], single_func)
@@ -212,7 +217,8 @@ class ServeModel(object):
             attr = getattr(self.model, name)
 
             if not name.startswith("__") and not callable(attr):
-                if not getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) and name not in blacklist_set:
+                if not getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) \
+                        and name not in blacklist_set:
                     self.all_atrributes.add(name)
 
     def _list_all_function(self):
@@ -245,7 +251,8 @@ class ServeModel(object):
         """
         Get description of a specific function
         """
-        if function_name is None or len(function_name) == 0 or function_name not in self.all_serve_function:
+        if function_name is None or len(function_name) == 0 \
+                or function_name not in self.all_serve_function:
             return "No description for unknown function"
 
         return getattr(self.model, function_name).__doc__
@@ -254,7 +261,8 @@ class ServeModel(object):
         """
         Get all parameters of a specific function
         """
-        if function_name is None or len(function_name) == 0 or function_name not in self.all_serve_function:
+        if function_name is None or len(function_name) == 0 \
+                or function_name not in self.all_serve_function:
             return "No parameters for unknown function"
 
         return str(signature(getattr(self.model, function_name)))
@@ -283,24 +291,24 @@ class ServeModel(object):
         accept_kwargs = "**" in str(inspect_func_)
 
         # Check valid parameters
-        for key, value in kwargs.items():
+        for key in kwargs.keys():
             if key not in inspect_func_.parameters:
                 if accept_kwargs:
                     pass
                 else:
-                    raise AssertionError(
-                        "You should not have {0} in your parameters. This function require: {1}".format(key,
-                                                                                                        inspect_func_.parameters))
+                    raise AssertionError("You should not have {0} in your parameters. "
+                                         "This function require: {1}".format(key,
+                                                                             inspect_func_.parameters))
         return kwargs
 
     def call_function(self, function_name_, id_=None, *args, **kwargs):
         """
         Flow request values into function_name and return output
         """
-        function_name, id = function_name_, id_
+        function_name, uid = function_name_, id_
         if function_name is None:
             raise AssertionError("You need to specify the function name (API name)")
-        mlchain_context['context_id'] = id_
+        mlchain_context['context_id'] = uid
         if isinstance(function_name, str):
             if len(function_name) == 0:
                 if hasattr(self.model, '__call__') and callable(getattr(self.model, '__call__')):
@@ -311,8 +319,7 @@ class ServeModel(object):
                 if function_name not in self.all_serve_function:
                     if function_name in self.all_atrributes:
                         return getattr(self.model, function_name)
-                    else:
-                        raise AssertionError("This function or attribute hasn't been served or in blacklist")
+                    raise AssertionError("This function or attribute hasn't been served or in blacklist")
 
                 func_ = getattr(self.model, function_name)
 
@@ -328,10 +335,10 @@ class ServeModel(object):
         """
         Flow request values into function_name and return output
         """
-        function_name, id = function_name_, id_
+        function_name, uid = function_name_, id_
         if function_name is None:
             raise AssertionError("You need to specify the function name (API name)")
-        mlchain_context['context_id'] = id_
+        mlchain_context['context_id'] = uid
         if isinstance(function_name, str):
             if len(function_name) == 0:
                 if hasattr(self.model, '__call__') and callable(getattr(self.model, '__call__')):
@@ -342,8 +349,7 @@ class ServeModel(object):
                 if function_name not in self.all_serve_function:
                     if function_name in self.all_atrributes:
                         return getattr(self.model, function_name)
-                    else:
-                        raise AssertionError("This function or attribute hasn't been served or in blacklist")
+                    raise AssertionError("This function or attribute hasn't been served or in blacklist")
 
                 func_ = getattr(self.model, function_name)
 

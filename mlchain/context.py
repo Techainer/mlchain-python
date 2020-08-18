@@ -10,8 +10,7 @@ class MLChainContext:
             variables = self.variables.get()
             if item in variables:
                 return variables[item]
-            else:
-                return None
+            return None
         except:
             return None
 
@@ -41,8 +40,7 @@ class MLChainContext:
             variables = self.variables.get()
             if item in variables:
                 return True
-            else:
-                return False
+            return False
         except:
             return False
 
@@ -83,8 +81,8 @@ class MLChainContext:
             variables = {}
         return deepcopy(variables)
 
-    def set(self, vars):
-        self.variables.set(vars)
+    def set(self, variables):
+        self.variables.set(variables)
 
 
 mlchain_context = MLChainContext()

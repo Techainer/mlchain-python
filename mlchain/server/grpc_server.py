@@ -1,29 +1,28 @@
-from mlchain.base.serve_model import ServeModel
-from concurrent import futures
-from .base import MLServer
-import grpc
-from .protos import mlchain_pb2, mlchain_pb2_grpc
-from threading import Thread
 import time
+from threading import Thread
+from concurrent import futures
+from uuid import uuid4
+import grpc
 import mlchain
 from mlchain import mlchain_context
-from uuid import uuid4
 from mlchain.base.exceptions import MlChainError
 from mlchain.base.log import logger
+from mlchain.base.serve_model import ServeModel
+from .base import MLServer
+from .protos import mlchain_pb2, mlchain_pb2_grpc
 
 
 class GrpcServer(mlchain_pb2_grpc.MLChainServiceServicer, MLServer):
     """Provides methods that implement functionality of route guide server."""
 
-    def __init__(self, model: ServeModel, name=None, api_keys=None, version='0.0'):
+    def __init__(self, model: ServeModel, name=None, version='0.0'):
         MLServer.__init__(self, model, name=name)
         self.version = version
 
     def get_serializer(self, serializer):
         if serializer in self.serializers_dict:
             return self.serializers_dict[serializer]
-        else:
-            return self.serializers_dict['application/json']
+        return self.serializers_dict['application/json']
 
     def ping(self, request, context):
         return mlchain_pb2.Byte(value=b'pong')
@@ -35,9 +34,9 @@ class GrpcServer(mlchain_pb2_grpc.MLChainServiceServicer, MLServer):
         kwargs = request.kwargs
         serializer = self.get_serializer(header.serializer)
         headers = request.headers
-        id = uuid4().hex
+        uid = uuid4().hex
         mlchain_context.set(headers)
-        mlchain_context['context_id'] = id
+        mlchain_context['context_id'] = uid
         args = serializer.decode(args)
         kwargs = serializer.decode(kwargs)
         func = self.model.get_function(function_name)

@@ -1,9 +1,10 @@
+import os
+import logging
 import subprocess
 import signal
 import sys
 import click
-import os
-import logging
+
 
 def sigterm_handler(nginx_pid, gunicorn_pid):
     try:
@@ -26,8 +27,8 @@ def start_server(sub_command):
     nginx = subprocess.Popen(['nginx', '-c', '/etc/nginx/nginx.conf'])
     gunicorn = subprocess.Popen(sub_command)
 
-    signal.signal(signal.SIGTERM, lambda a,
-                                         b: sigterm_handler(nginx.pid, gunicorn.pid))
+    signal.signal(signal.SIGTERM,
+                  lambda a, b: sigterm_handler(nginx.pid, gunicorn.pid))
 
     pids = set([nginx.pid, gunicorn.pid])
     while True:
@@ -38,7 +39,9 @@ def start_server(sub_command):
     sigterm_handler(nginx.pid, gunicorn.pid)
     logging.info('Inference server exiting')
 
-@click.command("serve", short_help="Inference server.",context_settings={"ignore_unknown_options": True})
+
+@click.command("serve", short_help="Inference server.",
+               context_settings={"ignore_unknown_options": True})
 @click.argument('command', nargs=-1, required=True)
 def serve_command(command):
     start_server(list(command))
