@@ -9,7 +9,6 @@ cors: true
 static_folder:    # static folder for TemplateResponse
 static_url_path:  # static url path for TemplateResponse
 template_folder:  # template folder for TemplateResponse
-
 gunicorn: # config apm-server if uses gunicorn wrapper
   timeout: 60
   keepalive: 60

@@ -71,12 +71,12 @@ class Model():
 # define model
 model = Model()
 
-`# serve model
-serve_model = ServeModel(model)`
+# serve model
+serve_model = ServeModel(model)
 
 # deploy model
 if __name__ == '__main__':
-    from mlchain.rpc.server.flask_server import FlaskServer
+    from mlchain.server.flask_server import FlaskServer
     FlaskServer(serve_model).run(port=5000,threads=12) # run flask model with upto 12 threads
 ```
 

@@ -17,7 +17,8 @@ from mlchain.base.wrapper import GunicornWrapper, HypercornWrapper
 from .base import MLServer, Converter, RawResponse, FileResponse, TemplateResponse
 from .format import RawFormat
 from .swagger import SwaggerTemplate
-from .view import View, ViewAsync
+from .view import ViewAsync
+from .autofrontend import register_autofrontend
 
 APP_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(APP_PATH, 'server/templates')
@@ -335,7 +336,7 @@ class QuartServer(MLServer):
     def run(self, host='127.0.0.1', port=8080, bind=None,
             cors=False, cors_allow_origins="*", gunicorn=False, hypercorn=True,
             debug=False, use_reloader=False, workers=1, timeout=60, keepalive=5,
-            max_requests=0, threads=1, worker_class='asyncio', umask='0', **kwargs):
+            max_requests=0, threads=1, worker_class='asyncio', umask='0', ngrok=False, model_id=None, **kwargs):
         """
         Run a server from a Python class
         :model: Your model class
@@ -367,12 +368,28 @@ class QuartServer(MLServer):
             raise AssertionError(
                 "Bind have to be list or string of the form: HOST, HOST:PORT, unix:PATH, fd://FD. An IP is a valid HOST.")
 
-        if cors:
-            CORS(self.app, allow_origin=cors_allow_origins)
         try:
             self.register_swagger()
         except Exception as ex:
             logger.error("Can't register swagger with error {0}".format(ex))
+
+        if ngrok:
+            from pyngrok import ngrok as pyngrok
+            endpoint = pyngrok.connect(port=port)
+            logger.info("Ngrok url: {0}".format(endpoint))
+            os.environ['NGROK_URL'] = endpoint
+        else:
+            endpoint = os.environ.get('NGROK_URL')
+
+        try:
+            register_autofrontend(model_id=model_id, serve_model=self.model,
+                                  version=self.version,
+                                  endpoint=endpoint)
+        except Exception as ex:
+            logger.error("Can't register autofrontend with error {0}".format(ex))
+
+        if cors:
+            CORS(self.app, allow_origin=cors_allow_origins)
 
         if not gunicorn and not hypercorn:
             if bind is not None:

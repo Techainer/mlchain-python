@@ -51,3 +51,4 @@ pyyaml
 fuzzywuzzy
 GPUtil
 tqdm
+pyngrok

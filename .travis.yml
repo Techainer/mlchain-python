@@ -47,5 +47,5 @@ install:
   - python --version
   - pip install .
 script:
-  - pylint
+  - pylint mlchain
   - pytest tests/

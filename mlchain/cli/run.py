@@ -82,9 +82,10 @@ op_api_format = click.option('--api_format', '-a', 'api_format', default=None, t
 @op_name
 @op_mode
 @op_api_format
+@click.option('--ngrok/--no-ngrok', default=False, type=bool)
 @click.argument('kws', nargs=-1)
 def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
-                name, mode, api_format, kws):
+                name, mode, api_format, ngrok, kws):
     from mlchain import config as mlconfig
     default_config = False
     if config is None:
@@ -103,6 +104,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
         if mode in config['mode']['env']:
             config['mode']['default'] = mode
     mlconfig.load_config(config)
+    model_id = mlconfig.get_value(None, config, 'model_id', None)
     entry_file = mlconfig.get_value(entry_file, config, 'entry_file', 'server.py')
     host = mlconfig.get_value(host, config, 'host', 'localhost')
     port = mlconfig.get_value(port, config, 'port', 5000)
@@ -146,7 +148,11 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
         kws=kws
     ))
     bind = list(bind)
-
+    if ngrok:
+        from pyngrok import ngrok as pyngrok
+        endpoint = pyngrok.connect(port=port)
+        logger.info("Ngrok url: {0}".format(endpoint))
+        os.environ['NGROK_URL'] = endpoint
     if server == 'grpc':
         from mlchain.server.grpc_server import GrpcServer
         app = get_model(entry_file, serve_model=True)
@@ -155,6 +161,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
     elif wrapper == 'gunicorn':
         from gunicorn.app.base import BaseApplication
         gpus = select_gpu()
+        autofrontend = False
 
         class GunicornWrapper(BaseApplication):
             def __init__(self, server_, **kwargs):
@@ -171,11 +178,19 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
 
             def load(self):
                 os.environ['CUDA_VISIBLE_DEVICES'] = str(next(gpus))
-                app = get_model(entry_file, serve_model=True)
-                if isinstance(app, ServeModel):
+                serve_model = get_model(entry_file, serve_model=True)
+                global autofrontend
+                if isinstance(serve_model, ServeModel):
+                    if (not autofrontend) and model_id is not None:
+                        from mlchain.server.autofrontend import register_autofrontend
+                        register_autofrontend(model_id, serve_model=serve_model,
+                                              version=version,
+                                              endpoint=os.getenv('NGROK_URL'))
+                        autofrontend = None
+
                     if self.server == 'flask':
                         from mlchain.server.flask_server import FlaskServer
-                        app = FlaskServer(app, name=name, api_format=api_format,
+                        app = FlaskServer(serve_model, name=name, api_format=api_format,
                                           version=version,
                                           authentication=authentication,
                                           static_url_path=static_url_path,
@@ -188,7 +203,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                         return app.app
                     if self.server == 'quart':
                         from mlchain.server.quart_server import QuartServer
-                        app = QuartServer(app, name=name, api_format=api_format,
+                        app = QuartServer(serve_model, name=name, api_format=api_format,
                                           version=version,
                                           authentication=authentication,
                                           static_url_path=static_url_path,
@@ -203,6 +218,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
 
         if host is not None and port is not None:
             bind.append('{0}:{1}'.format(host, port))
+
         bind = list(set(bind))
         gunicorn_config = config.get('gunicorn', {})
         gunicorn_env = ['worker_class', 'threads', 'workers']
@@ -215,6 +231,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
         for k in gunicorn_env:
             if get_env(k) in os.environ:
                 gunicorn_config[k] = os.environ[get_env(k)]
+
         GunicornWrapper(server, bind=bind, **gunicorn_config).run()
     elif wrapper == 'hypercorn' and server == 'quart':
         from mlchain.server.quart_server import QuartServer
@@ -225,7 +242,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                           static_folder=static_folder,
                           template_folder=template_folder)
         app.run(host, port, bind=bind, cors=cors,
-                gunicorn=False, hypercorn=True, **config.get('hypercorn', {}))
+                gunicorn=False, hypercorn=True, **config.get('hypercorn', {}), model_id=model_id)
 
     app = get_model(entry_file)
     if isinstance(app, MLServer):
@@ -246,7 +263,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                               static_url_path=static_url_path,
                               static_folder=static_folder,
                               template_folder=template_folder)
-            app.run(host, port, cors=cors, gunicorn=False)
+            app.run(host, port, cors=cors, gunicorn=False, model_id=model_id)
         elif server == 'quart':
             from mlchain.server.quart_server import QuartServer
             app = QuartServer(app, name=name, api_format=api_format,
@@ -255,7 +272,8 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                               static_url_path=static_url_path,
                               static_folder=static_folder,
                               template_folder=template_folder)
-            app.run(host, port, cors=cors, gunicorn=False, hypercorn=False)
+            app.run(host, port, cors=cors, gunicorn=False,
+                    hypercorn=False, model_id=model_id)
 
         elif server == 'grpc':
             from mlchain.server.grpc_server import GrpcServer

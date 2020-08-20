@@ -14,7 +14,7 @@ from mlchain.base.wrapper import GunicornWrapper
 from mlchain.base.log import logger, format_exc
 from mlchain.base.exceptions import MlChainError
 from .swagger import SwaggerTemplate
-from .autofrontend import AutofrontendConfig
+from .autofrontend import register_autofrontend
 from .base import MLServer, Converter, RawResponse, FileResponse, TemplateResponse
 from .format import RawFormat
 from .view import View
@@ -300,78 +300,6 @@ class FlaskServer(MLServer):
 
         self.app.register_blueprint(swagger_ui)
 
-    def register_autofrontend(self, endpoint=None, mlchain_management=None):
-        if endpoint is None:
-            endpoint = ''
-        autofrontend_template = AutofrontendConfig(title=self.name)
-        if self.model.config is not None:
-            out_configs = self.model.config
-        else:
-            out_configs = {}
-        for name, func in self.model.get_all_func().items():
-            if name in out_configs:
-                out_config = out_configs[name]
-                if 'config' in out_config:
-                    config = out_config['config']
-                else:
-                    config = None
-                if 'example' in out_config:
-                    @self.app.route(f'/sample/{name}', methods=['POST', 'GET'])
-                    def sample():
-                        return jsonify({'output': out_config['example']})
-
-                    sample_url = f'{endpoint}/sample/{name}'
-                else:
-                    sample_url = None
-            else:
-                config = None
-                sample_url = None
-            autofrontend_template.add_endpoint(func, f'{endpoint}/call/{name}',
-                                               output_config=config,
-                                               sample_url=sample_url)
-        if os.path.exists("Readme.md"):
-            description = open("Readme.md", encoding='utf-8').read()
-        else:
-            description = ""
-
-        if os.path.exists("changelog.md"):
-            changelog = open("changelog.md", encoding='utf-8').read()
-        else:
-            changelog = ""
-
-        @self.app.route('/model', methods=['GET', 'POST'])
-        def model_summary():
-            return jsonify(autofrontend_template.summary)
-
-        @self.app.route('/model/demo', methods=['GET', 'POST'])
-        def demo_config():
-            return jsonify(autofrontend_template.config)
-
-        @self.app.route('/model/description', methods=['GET', 'POST'])
-        def model_description():
-            return Response(json.dumps({"value": description}), status=404)
-
-        @self.app.route('/model/changelog', methods=['GET', 'POST'])
-        def model_changelog():
-            return Response(json.dumps({"value": changelog}), status=404)
-
-        if mlchain_management and mlchain.model_id is not None:
-            config_version = {
-                "model_id": mlchain.model_id,
-                "version": self.version,
-                "input_config": autofrontend_template.input_config,
-                "output_config": autofrontend_template.output_config,
-                'endpoint': endpoint,
-                'readme': description,
-                'changelog': changelog
-            }
-            try:
-                import requests
-                res = requests.post(mlchain_management, json=config_version)
-                logger.info(str(res.json()))
-            except:
-                pass
-
     def register_home(self):
         home_ui = Blueprint("home",
                             __name__,
@@ -389,7 +317,7 @@ class FlaskServer(MLServer):
             cors_allow_origins='*', gunicorn=False, debug=False,
             use_reloader=False, workers=1, timeout=60, keepalive=10,
             max_requests=0, threads=1, worker_class='gthread', umask='0',
-            endpoint=None, mlchain_management=None, **kwargs):
+            ngrok=False, model_id=None, **kwargs):
         """
         Run a server from a Python class
         :model: Your model class
@@ -414,17 +342,28 @@ class FlaskServer(MLServer):
         :umask: A bit mask for the file mode on files written by Gunicorn.
         :kwargs: Other Gunicorn options
         """
-        if cors:
-            CORS(self.app, resources=cors_resources, origins=cors_allow_origins)
         try:
             self.register_swagger()
         except Exception as ex:
             logger.error("Can't register swagger with error {0}".format(ex))
 
+        if ngrok:
+            from pyngrok import ngrok as pyngrok
+            endpoint = pyngrok.connect(port=port)
+            logger.info("Ngrok url: {0}".format(endpoint))
+            os.environ['NGROK_URL'] = endpoint
+        else:
+            endpoint = os.environ.get('NGROK_URL')
+
         try:
-            self.register_autofrontend(endpoint=endpoint, mlchain_management=mlchain_management)
+            register_autofrontend(model_id=model_id, serve_model=self.model,
+                                  version=self.version,
+                                  endpoint=endpoint)
         except Exception as ex:
             logger.error("Can't register autofrontend with error {0}".format(ex))
+
+        if cors:
+            CORS(self.app, resources=cors_resources, origins=cors_allow_origins)
         if not gunicorn:
             if bind is not None:
                 if isinstance(bind, str):

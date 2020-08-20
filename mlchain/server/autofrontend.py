@@ -2,27 +2,26 @@ import os
 from inspect import signature
 from typing import Union
 from copy import deepcopy
-import datetime
-import getpass
+from mlchain import logger
 from werkzeug.datastructures import FileStorage
 import numpy as np
 
 
 class AutofrontendConfig:
     def __init__(self, title='MLChain', description='Autofrontend'):
-        self.id = 0
-        self.summary = {
-            'id': self.id,
-            'name': title,
-            'short_description': description,
-            'image': '',
-            'created_at': datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"),
-            'status': 'public',
-            'owner': {
-                'name': getpass.getuser(),
-                'id': '0',
-            }
-        }
+        # self.id = 0
+        # self.summary = {
+        #     'id': self.id,
+        #     'name': title,
+        #     'short_description': description,
+        #     'image': '',
+        #     'created_at': datetime.datetime.now().strftime("%d/%m/%Y, %H:%M:%S"),
+        #     'status': 'public',
+        #     'owner': {
+        #         'name': getpass.getuser(),
+        #         'id': '0',
+        #     }
+        # }
         self.input_config = {
             'type': 'multi_scenarios'
         }
@@ -114,3 +113,50 @@ def generate_type(key, pytype, default=None):
             'label': key.upper(),
             'key': key
         }
+
+
+def register_autofrontend(model_id, serve_model, version='latest', endpoint=None):
+    mlchain_management = os.getenv('MLCHAIN_URL', None)
+    if endpoint is None:
+        endpoint = ''
+    autofrontend_template = AutofrontendConfig()
+    if serve_model.config is not None:
+        out_configs = serve_model.config
+    else:
+        out_configs = {}
+    for name, func in serve_model.get_all_func().items():
+        if name in out_configs:
+            out_config = out_configs[name]
+            if 'config' in out_config:
+                config = out_config['config']
+            else:
+                config = None
+        else:
+            config = None
+        autofrontend_template.add_endpoint(func, f'{endpoint}/call/{name}', output_config=config)
+    if os.path.exists("Readme.md"):
+        description = open("Readme.md", encoding='utf-8').read()
+    else:
+        description = ""
+
+    if os.path.exists("changelog.md"):
+        changelog = open("changelog.md", encoding='utf-8').read()
+    else:
+        changelog = ""
+
+    if mlchain_management and model_id is not None:
+        config_version = {
+            "model_id": model_id,
+            "version": version,
+            "input_config": autofrontend_template.input_config,
+            "output_config": autofrontend_template.output_config,
+            'endpoint': endpoint,
+            'readme': description,
+            'changelog': changelog
+        }
+        try:
+            import requests
+            res = requests.post(f'{mlchain_management}/version/create', json=config_version)
+            logger.info(str(res.json()))
+        except Exception as ex:
+            logger.error(ex)
