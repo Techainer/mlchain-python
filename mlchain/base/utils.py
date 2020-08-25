@@ -41,11 +41,11 @@ def is_image_url_and_ready(url):
     return is_url_image(url) and check_url(url)
 
 
-def read_image_from_url_cv2(url):
+def read_image_from_url_cv2(url, flag):
     import_cv2()
     logger.info("Read cv2 image from: {0}".format(url))
     byte_data = bytearray(urlopen(Request(url=url, headers=headers), timeout=100).read())
-    return cv2.imdecode(np.asarray(byte_data, dtype="uint8"), cv2.IMREAD_UNCHANGED)
+    return cv2.imdecode(np.asarray(byte_data, dtype="uint8"), flag)
 
 
 def read_image_from_url_pil(url):

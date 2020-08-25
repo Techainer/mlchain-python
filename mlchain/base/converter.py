@@ -7,10 +7,18 @@ from inspect import signature, _empty
 from collections import defaultdict
 import numpy as np
 from PIL import Image, ImageSequence
+from mlchain import mlconfig
 from mlchain.base.exceptions import MLChainAssertionError
 
 cv2 = None
 ALL_LOWER_TRUE = ["true", "yes", "yeah", "y"]
+
+if mlconfig.image_rgba is None:
+    CV2FLAG = 1
+elif mlconfig.image_rgba.lower() in ALL_LOWER_TRUE:
+    CV2FLAG = -1
+else:
+    CV2FLAG = 1
 
 
 def import_cv2():
@@ -28,7 +36,7 @@ def str2ndarray(value: str) -> np.ndarray:
         # If it is a url image
         if is_image_url_and_ready(value):
             from mlchain.base.utils import read_image_from_url_cv2
-            return read_image_from_url_cv2(value)
+            return read_image_from_url_cv2(value, CV2FLAG)
         else:
             raise MLChainAssertionError("Image url is not valid")
     if os.path.exists(value):
@@ -38,7 +46,7 @@ def str2ndarray(value: str) -> np.ndarray:
         import_cv2()
         content = value[value.index('base64') + 7:]
         nparr = np.fromstring(b64decode(content), np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_ANYCOLOR)
+        img = cv2.imdecode(nparr, CV2FLAG)
         if img is not None:
             return img
         else:
@@ -54,7 +62,7 @@ def str2ndarray(value: str) -> np.ndarray:
     # If it is a base64 encoded array
     try:
         nparr = np.fromstring(b64decode(value), np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_ANYCOLOR)
+        img = cv2.imdecode(nparr, CV2FLAG)
         if img is not None:
             return img
     except:
@@ -119,7 +127,7 @@ def cv2imread(filename, value) -> np.ndarray:
     import_cv2()
     value = cv2.imdecode(
         np.asarray(bytearray(value), dtype="uint8"),
-        cv2.IMREAD_COLOR)
+        CV2FLAG)
     if value is None:
         raise MLChainAssertionError("Can't read image from {0}".format(filename))
     return value
@@ -129,7 +137,7 @@ def cv2imread_to_list(filename, value) -> List[np.ndarray]:
     import_cv2()
     value = cv2.imdecode(
         np.asarray(bytearray(value), dtype="uint8"),
-        cv2.IMREAD_COLOR)
+        CV2FLAG)
     if value is None:
         raise MLChainAssertionError("Can't read image from {0}".format(filename))
     return [value]
