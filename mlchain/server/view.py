@@ -2,9 +2,11 @@ import time
 from typing import Union
 from uuid import uuid4
 from mlchain import mlchain_context
+from mlchain.base.exceptions import MlChainError
 from .format import BaseFormat, MLchainFormat
 from .base import RawResponse, FileResponse, JsonResponse, MLChainResponse
 from .authentication import Authentication
+import traceback
 
 
 class View:
@@ -83,9 +85,13 @@ class View:
             uid = self.init_context(headers)
             output = self.server.model.call_function(function_name, uid, **kwargs)
             exception = None
-        except Exception as ex:
+        except MlChainError as ex:
             exception = ex
             output = None
+        except Exception:
+            exception = traceback.format_exc()
+            output = None
+
         time_process = time.time() - start_time
         request_context['time_process'] = time_process
         output = self.normalize_output(formatter, function_name, headers,
@@ -127,8 +133,11 @@ class ViewAsync(View):
             uid = self.init_context(headers)
             output = await self.server.model.call_async_function(function_name, uid, **kwargs)
             exception = None
-        except Exception as ex:
+        except MlChainError as ex:
             exception = ex
+            output = None
+        except Exception:
+            exception = traceback.format_exc()
             output = None
         time_process = time.time() - start_time
         request_context['time_process'] = time_process

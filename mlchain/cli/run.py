@@ -161,13 +161,13 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
     elif wrapper == 'gunicorn':
         from gunicorn.app.base import BaseApplication
         gpus = select_gpu()
-        autofrontend = False
 
         class GunicornWrapper(BaseApplication):
             def __init__(self, server_, **kwargs):
                 assert server_.lower() in ['quart', 'flask']
                 self.server = server_.lower()
                 self.options = kwargs
+                self.autofrontend = False
                 super(GunicornWrapper, self).__init__()
 
             def load_config(self):
@@ -179,14 +179,13 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
             def load(self):
                 os.environ['CUDA_VISIBLE_DEVICES'] = str(next(gpus))
                 serve_model = get_model(entry_file, serve_model=True)
-                global autofrontend
                 if isinstance(serve_model, ServeModel):
-                    if (not autofrontend) and model_id is not None:
+                    if (not self.autofrontend) and model_id is not None:
                         from mlchain.server.autofrontend import register_autofrontend
                         register_autofrontend(model_id, serve_model=serve_model,
                                               version=version,
                                               endpoint=os.getenv('NGROK_URL'))
-                        autofrontend = None
+                        self.autofrontend = True
 
                     if self.server == 'flask':
                         from mlchain.server.flask_server import FlaskServer

@@ -7,8 +7,8 @@ from inspect import signature, _empty
 from collections import defaultdict
 import numpy as np
 from PIL import Image, ImageSequence
-from mlchain import mlconfig
-from mlchain.base.exceptions import MLChainAssertionError
+from .exceptions import MLChainAssertionError
+from ..config import mlconfig
 
 cv2 = None
 ALL_LOWER_TRUE = ["true", "yes", "yeah", "y"]
