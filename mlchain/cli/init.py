@@ -1,5 +1,6 @@
 import os
 import click
+from mlchain import logger
 
 root_path = os.path.dirname(__file__)
 
@@ -9,5 +10,8 @@ root_path = os.path.dirname(__file__)
 def init_command(file):
     if file is None:
         file = 'mlconfig.yaml'
-    with open(file, 'wb') as fp:
-        fp.write(open(os.path.join(root_path, 'config.yaml'), 'rb').read())
+    if os.path.exists(file):
+        logger.warning("File {} exists. Please change name file")
+    else:
+        with open(file, 'wb') as fp:
+            fp.write(open(os.path.join(root_path, 'config.yaml'), 'rb').read())
