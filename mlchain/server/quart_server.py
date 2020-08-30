@@ -131,6 +131,7 @@ class QuartEndpointAction:
                     output = self.action(*args, **kwargs, serializer=serializer)
                 else:
                     output = self.action(*args, **kwargs)
+
             if isinstance(output, RawResponse):
                 output = Response(output.response, status=output.status,
                                   headers=output.headers,
@@ -139,6 +140,7 @@ class QuartEndpointAction:
                 output.headers['mlchain_version'] = mlchain.__version__
                 output.headers['api_version'] = self.version
                 return output
+
             if isinstance(output, FileResponse):
                 file = await send_file(output.path)
                 for k, v in output.headers.items():
@@ -146,6 +148,10 @@ class QuartEndpointAction:
                 file.headers['mlchain_version'] = mlchain.__version__
                 file.headers['api_version'] = self.version
                 return file
+
+            if isinstance(output, Response):
+                return output
+
             output = {
                 'output': output,
                 'time': round(time.time() - start_time, 2),
@@ -197,11 +203,18 @@ class QuartView(ViewAsync):
     async def parse_data(self):
         try:
             headers = request.headers
+            # Parse form
             temp = await request.form
             form = defaultdict(list)
             for k, v in temp.items():
                 form[k].append(v)
+            
+            # Parse Params 
+            temp = request.args
+            for k, v in temp.items():
+                form[k].append(v)
 
+            # Parse Files 
             temp = await request.files
             files = defaultdict(list)
             for k, v in temp.items():
@@ -222,6 +235,7 @@ class QuartView(ViewAsync):
             output.headers['mlchain_version'] = mlchain.__version__
             output.headers['api_version'] = self.server.version
             return output
+
         if isinstance(response, FileResponse):
             file = await send_file(response.path)
             for k, v in response.headers.items():
@@ -229,8 +243,13 @@ class QuartView(ViewAsync):
             file.headers['mlchain_version'] = mlchain.__version__
             file.headers['api_version'] = self.server.version
             return file
+
         if isinstance(response, TemplateResponse):
             return await render_template(response.template_name, **response.context)
+
+        if isinstance(response, Response):
+            return response
+
         raise Exception("make response must return RawResponse or FileResponse")
 
 
@@ -243,6 +262,8 @@ class QuartServer(MLServer):
                          template_folder=template_folder,
                          static_url_path=static_url_path)
         self.app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
+        self.app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
         self.version = version
         self.converter = Converter(FileStorage, self._get_file_name, self._get_data)
         self.authentication = authentication
@@ -262,10 +283,10 @@ class QuartServer(MLServer):
                                            api_format.__class__.__name__)
         self.app.add_url_rule('/call/<function_name>', 'call',
                               QuartView(self, api_format, self.authentication),
-                              methods=['POST', 'GET'])
+                              methods=['POST', 'GET'], strict_slashes=False)
         self.app.add_url_rule('/call_raw/<function_name>', 'call_raw',
                               QuartView(self, RawFormat(), self.authentication),
-                              methods=['POST', 'GET'])
+                              methods=['POST', 'GET'], strict_slashes=False)
 
     def register_home(self):
         home_ui = Blueprint("home", __name__, static_folder=STATIC_PATH,
