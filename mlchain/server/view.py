@@ -1,7 +1,7 @@
 import time
 from typing import Union
 from uuid import uuid4
-from mlchain import mlchain_context
+from mlchain import mlchain_context,logger
 from mlchain.base.exceptions import MlChainError
 from .format import BaseFormat, MLchainFormat
 from .base import RawResponse, FileResponse, JsonResponse, MLChainResponse
@@ -90,6 +90,7 @@ class View:
             output = None
         except Exception:
             exception = traceback.format_exc()
+            logger.error(exception)
             output = None
 
         time_process = time.time() - start_time
@@ -138,6 +139,7 @@ class ViewAsync(View):
             output = None
         except Exception:
             exception = traceback.format_exc()
+            logger.error(exception)
             output = None
         time_process = time.time() - start_time
         request_context['time_process'] = time_process

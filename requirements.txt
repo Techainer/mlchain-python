@@ -5,7 +5,7 @@ attrs>=19.3.0
 blinker>=1.4
 blosc>=1.8.3; sys_platform != 'win32'
 chardet>=3.0.4
-Click>=7.0
+Click>=7.1.2
 Flask>=1.1.2
 Flask-Cors>=3.0.8
 gunicorn>=20.0.4

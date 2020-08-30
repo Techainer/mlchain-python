@@ -50,6 +50,10 @@ def prepare_import(path):
     return ".".join(module_name[::-1])
 
 
+def get_env(_k):
+    return 'GUNICORN_' + _k.upper()
+
+
 op_config = click.option("--config", "-c", default=None, help="file json or yaml")
 op_name = click.option("--name", "-n", default=None, help="name service")
 op_host = click.option("--host", "-h", default=None, help="The interface to bind to.")
@@ -224,13 +228,13 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
         if workers is not None:
             gunicorn_config['workers'] = workers
 
-        def get_env(_k):
-            return 'GUNICORN_' + _k.upper()
-
         for k in gunicorn_env:
             if get_env(k) in os.environ:
                 gunicorn_config[k] = os.environ[get_env(k)]
-
+        if server == 'flask' and 'worker_class' in gunicorn_config:
+            if 'uvicorn' in gunicorn_config['worker_class']:
+                logger.warning("Can't use flask with uvicorn. change to gthread")
+                gunicorn_config['worker_class'] = 'gthread'
         GunicornWrapper(server, bind=bind, **gunicorn_config).run()
     elif wrapper == 'hypercorn' and server == 'quart':
         from mlchain.server.quart_server import QuartServer
@@ -240,7 +244,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                           static_url_path=static_url_path,
                           static_folder=static_folder,
                           template_folder=template_folder)
-        app.run(host, port, bind=bind, cors=cors,
+        app.run(host, port, bind=bind, cors=cors, workers=workers,
                 gunicorn=False, hypercorn=True, **config.get('hypercorn', {}), model_id=model_id)
 
     app = get_model(entry_file)
@@ -262,7 +266,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                               static_url_path=static_url_path,
                               static_folder=static_folder,
                               template_folder=template_folder)
-            app.run(host, port, cors=cors, gunicorn=False, model_id=model_id)
+            app.run(host, port, cors=cors, gunicorn=False, model_id=model_id, threads=workers > 1)
         elif server == 'quart':
             from mlchain.server.quart_server import QuartServer
             app = QuartServer(app, name=name, api_format=api_format,
@@ -272,7 +276,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                               static_folder=static_folder,
                               template_folder=template_folder)
             app.run(host, port, cors=cors, gunicorn=False,
-                    hypercorn=False, model_id=model_id)
+                    hypercorn=False, model_id=model_id, workers=workers)
 
         elif server == 'grpc':
             from mlchain.server.grpc_server import GrpcServer
