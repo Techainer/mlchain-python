@@ -5,6 +5,8 @@ from mlchain import mlchain_context,logger
 from mlchain.base.exceptions import MlChainError
 from .format import BaseFormat, MLchainFormat
 from .base import RawResponse, FileResponse, JsonResponse, MLChainResponse
+from flask import Response as FlaskResponse 
+from quart import Response as QuartReponse
 from .authentication import Authentication
 import traceback
 
@@ -51,6 +53,10 @@ class View:
             output.headers['response-type'] = 'mlchain/json'
         elif isinstance(output, RawResponse):
             output.headers['response-type'] = 'mlchain/raw'
+        elif isinstance(output, FlaskResponse):
+            output.headers['response-type'] = 'mlchain/flask_raw'
+        elif isinstance(output, QuartReponse):
+            output.headers['response-type'] = 'mlchain/quart_raw'
         elif isinstance(output, MLChainResponse):
             pass
         else:

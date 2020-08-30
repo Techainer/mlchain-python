@@ -132,6 +132,9 @@ class FlaskEndpointAction:
                 file.headers['mlchain_version'] = mlchain.__version__
                 file.headers['api_version'] = self.version
                 return file
+            if isinstance(output, Response):
+                return output
+
             output = {
                 'output': output,
                 'time': round(time.time() - start_time, 2),
@@ -183,6 +186,7 @@ class FlaskView(View):
         try:
             headers = request.headers
             form = request.form.to_dict(flat=False)
+            form.update(request.args.to_dict(flat=False))
             files = request.files.to_dict(flat=False)
             data = request.data
             return headers, form, files, data
@@ -200,6 +204,7 @@ class FlaskView(View):
             output.headers['mlchain_version'] = mlchain.__version__
             output.headers['api_version'] = self.server.version
             return output
+            
         if isinstance(response, FileResponse):
             file = send_file(response.path, mimetype=response.mimetype)
             for k, v in response.headers.items():
@@ -207,8 +212,12 @@ class FlaskView(View):
             file.headers['mlchain_version'] = mlchain.__version__
             file.headers['api_version'] = self.server.version
             return file
+
         if isinstance(response, TemplateResponse):
             return render_template(response.template_name, **response.context)
+
+        if isinstance(response, Response): 
+            return response
         raise Exception("make response must return RawResponse or FileResponse")
 
 
@@ -221,6 +230,8 @@ class FlaskServer(MLServer):
                          template_folder=template_folder,
                          static_url_path=static_url_path)
         self.app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
+        self.app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+
         self.version = version
         self.converter = Converter(FileStorage, self._get_file_name, self._get_data)
         self.register_home()
@@ -240,10 +251,10 @@ class FlaskServer(MLServer):
                                            api_format.__class__.__name__)
         self.app.add_url_rule('/call/<function_name>', 'call',
                               FlaskView(self, api_format, self.authentication),
-                              methods=['POST', 'GET'])
+                              methods=['POST', 'GET'], strict_slashes=False)
         self.app.add_url_rule('/call_raw/<function_name>', 'call_raw',
                               FlaskView(self, RawFormat(), self.authentication),
-                              methods=['POST', 'GET'])
+                              methods=['POST', 'GET'], strict_slashes=False)
 
     def _get_file_name(self, storage):
         return storage.filename
