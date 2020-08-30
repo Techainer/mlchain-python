@@ -11,7 +11,7 @@ def init_command(file):
     if file is None:
         file = 'mlconfig.yaml'
     if os.path.exists(file):
-        logger.warning("File {} exists. Please change name file")
+        logger.warning("File {} exists. Please change name file".format(file))
     else:
         with open(file, 'wb') as fp:
             fp.write(open(os.path.join(root_path, 'config.yaml'), 'rb').read())
