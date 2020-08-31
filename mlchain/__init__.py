@@ -1,5 +1,5 @@
 # Parameters of MLchain
-__version__ = "0.1.5rc2"
+__version__ = "0.1.5rc3"
 HOST = "https://www.api.mlchain.ml"
 WEB_HOST = HOST
 API_ADDRESS = HOST

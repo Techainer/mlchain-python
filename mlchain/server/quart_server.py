@@ -208,7 +208,7 @@ class QuartView(ViewAsync):
             form = defaultdict(list)
             for k, v in temp.items():
                 form[k].append(v)
-            
+
             # Parse Params 
             temp = request.args
             for k, v in temp.items():
@@ -430,6 +430,8 @@ class QuartServer(MLServer):
             bind_host_port = '%s:%s' % (host, port)
             if not bind:
                 bind = [bind_host_port]
+            else:
+                bind.append(bind_host_port)
 
             logger.info("-" * 80)
             logger.info("Served model with Quart and Hypercorn at bind={}".format(bind))
@@ -453,9 +455,10 @@ class QuartServer(MLServer):
             bind_host_port = '%s:%s' % (host, port)
             if bind is None:
                 bind = [bind_host_port]
+            else:
+                bind.append(bind_host_port)
 
             worker_class = 'uvicorn.workers.UvicornWorker'
-
             logger.info("-" * 80)
             logger.info("Served model with Quart and Gunicorn at bind={}".format(bind))
             logger.info("Number of workers: {}".format(workers))
