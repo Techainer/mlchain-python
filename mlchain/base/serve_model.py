@@ -5,7 +5,7 @@ import itertools
 import types
 from mlchain.context import mlchain_context
 from .exceptions import MlChainError
-
+from mlchain.base.log import logger, format_exc
 
 def non_thread(timeout=-1):
     if timeout is None or (isinstance(timeout, (float, int)) and timeout <= 0):
@@ -165,19 +165,26 @@ class ServeModel:
         output = []
         if deny_all_function:
             for name in dir(self.model):
-                attr = getattr(self.model, name)
+                try:
+                    attr = getattr(self.model, name)
 
-                if not name.startswith("__") and (
-                        getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) or name not in whitelist):
-                    output.append(name)
+                    if not name.startswith("__") and (
+                            getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) or name not in whitelist):
+                        output.append(name)
+                except Exception as e: 
+                    pass
         else:
             for name in dir(self.model):
                 attr = getattr(self.model, name)
 
-                if not name.startswith("__") \
-                        and (getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False)
-                             or name in blacklist):
-                    output.append(name)
+                try:
+                    if not name.startswith("__") \
+                            and (getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False)
+                                or name in blacklist):
+                        output.append(name)
+                except Exception as e:
+                    pass 
+
         return output
 
     def _check_all_func(self, blacklist_set):
@@ -216,10 +223,13 @@ class ServeModel:
         for name in dir(self.model):
             attr = getattr(self.model, name)
 
-            if not name.startswith("__") and not callable(attr):
-                if not getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) \
-                        and name not in blacklist_set:
-                    self.all_atrributes.add(name)
+            try:
+                if not name.startswith("__") and not callable(attr):
+                    if not getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) \
+                            and name not in blacklist_set:
+                        self.all_atrributes.add(name)
+            except Exception as e: 
+                pass
 
     def _list_all_function(self):
         """
