@@ -118,6 +118,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
     bind = mlconfig.get_value(bind, config, 'bind', [])
     wrapper = mlconfig.get_value(wrapper, config, 'wrapper', None)
     workers = mlconfig.get_value(workers, config, 'workers', None)
+    if workers is None:
+        workers = 1
+    else:
+        workers = int(workers)
     name = mlconfig.get_value(name, config, 'name', None)
     cors = mlconfig.get_value(None, config, 'cors', False)
 
