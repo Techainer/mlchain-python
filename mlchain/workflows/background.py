@@ -57,3 +57,5 @@ class Background:
         task = BackgroundTask(interval=self.interval, task=self.task,
                               max_repeat=self.max_repeat)
         task.start()
+
+        return task
