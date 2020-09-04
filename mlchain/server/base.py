@@ -133,7 +133,8 @@ class MLServer:
         for key, value in list(kwargs.items()):
             if key in inspect_func_.parameters:
                 req_type = inspect_func_.parameters[key].annotation
-                kwargs[key] = self.convert(value, req_type)
+                if value != inspect_func_.parameters[key].default:
+                    kwargs[key] = self.convert(value, req_type)
             elif not accept_kwargs:
                 suggest = None
                 fuzz = 0
