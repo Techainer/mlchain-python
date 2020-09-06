@@ -4,8 +4,8 @@ from threading import Lock, Event
 import itertools
 import types
 from mlchain.context import mlchain_context
-from .exceptions import MlChainError
-from mlchain.base.log import logger, format_exc
+from .exceptions import MLChainAssertionError, MlChainError
+
 
 def non_thread(timeout=-1):
     if timeout is None or (isinstance(timeout, (float, int)) and timeout <= 0):
@@ -171,7 +171,7 @@ class ServeModel:
                     if not name.startswith("__") and (
                             getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) or name not in whitelist):
                         output.append(name)
-                except Exception as e: 
+                except Exception as e:
                     pass
         else:
             for name in dir(self.model):
@@ -180,10 +180,10 @@ class ServeModel:
                 try:
                     if not name.startswith("__") \
                             and (getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False)
-                                or name in blacklist):
+                                 or name in blacklist):
                         output.append(name)
                 except Exception as e:
-                    pass 
+                    pass
 
         return output
 
@@ -228,7 +228,7 @@ class ServeModel:
                     if not getattr(attr, "_MLCHAIN_EXCEPT_SERVING", False) \
                             and name not in blacklist_set:
                         self.all_atrributes.add(name)
-            except Exception as e: 
+            except Exception as e:
                 pass
 
     def _list_all_function(self):
@@ -290,26 +290,19 @@ class ServeModel:
         return output
 
     def get_function(self, function_name):
-        return getattr(self.model, function_name)
+        if len(function_name) == 0:
+            if hasattr(self.model, '__call__') and callable(getattr(self.model, '__call__')):
+                return getattr(self.model, '__call__')
+            else:
+                raise MLChainAssertionError("You need to specify the function name (API name)")
+        else:
+            if function_name not in self.all_serve_function:
+                if function_name in self.all_atrributes:
+                    return getattr(self.model, function_name)
+                raise MLChainAssertionError("This function or attribute hasn't been served or in blacklist. "
+                                            "Available function: {0}".format(self.all_serve_function))
 
-    def _valid_format_kwargs(self, kwargs, func_):
-        """
-        Normalize data into right formats of func_
-        """
-        inspect_func_ = signature(func_)
-
-        accept_kwargs = "**" in str(inspect_func_)
-
-        # Check valid parameters
-        for key in kwargs.keys():
-            if key not in inspect_func_.parameters:
-                if accept_kwargs:
-                    pass
-                else:
-                    raise AssertionError("You should not have {0} in your parameters. "
-                                         "This function require: {1}".format(key,
-                                                                             inspect_func_.parameters))
-        return kwargs
+            return getattr(self.model, function_name)
 
     def call_function(self, function_name_, id_=None, *args, **kwargs):
         """
@@ -324,21 +317,19 @@ class ServeModel:
                 if hasattr(self.model, '__call__') and callable(getattr(self.model, '__call__')):
                     func_ = getattr(self.model, '__call__')
                 else:
-                    raise AssertionError("You need to specify the function name (API name)")
+                    raise MLChainAssertionError("You need to specify the function name (API name)")
             else:
                 if function_name not in self.all_serve_function:
                     if function_name in self.all_atrributes:
                         return getattr(self.model, function_name)
-                    raise AssertionError("This function or attribute hasn't been served or in blacklist")
+                    raise MLChainAssertionError("This function or attribute hasn't been served or in blacklist")
 
                 func_ = getattr(self.model, function_name)
 
-            # Normalize format of input
-            self._valid_format_kwargs(kwargs, func_)
             # Call function
             output = func_(*args, **kwargs)
         else:
-            raise AssertionError("function_name must be str")
+            raise MLChainAssertionError("function_name must be str")
         return output
 
     async def call_async_function(self, function_name_, id_=None, *args, **kwargs):
@@ -347,30 +338,28 @@ class ServeModel:
         """
         function_name, uid = function_name_, id_
         if function_name is None:
-            raise AssertionError("You need to specify the function name (API name)")
+            raise MLChainAssertionError("You need to specify the function name (API name)")
         mlchain_context['context_id'] = uid
         if isinstance(function_name, str):
             if len(function_name) == 0:
                 if hasattr(self.model, '__call__') and callable(getattr(self.model, '__call__')):
                     func_ = getattr(self.model, '__call__')
                 else:
-                    raise AssertionError("You need to specify the function name (API name)")
+                    raise MLChainAssertionError("You need to specify the function name (API name)")
             else:
                 if function_name not in self.all_serve_function:
                     if function_name in self.all_atrributes:
                         return getattr(self.model, function_name)
-                    raise AssertionError("This function or attribute hasn't been served or in blacklist")
+                    raise MLChainAssertionError("This function or attribute hasn't been served or in blacklist")
 
                 func_ = getattr(self.model, function_name)
 
-            # Call function
-            self._valid_format_kwargs(kwargs, func_)
             if inspect.iscoroutinefunction(func_):
                 output = await func_(*args, **kwargs)
             else:
                 output = func_(*args, **kwargs)
         else:
-            raise AssertionError("function_name must be str")
+            raise MLChainAssertionError("function_name must be str")
         return output
 
     def get_all_func(self):
