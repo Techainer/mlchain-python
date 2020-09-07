@@ -5,7 +5,7 @@ from .task import Task
 
 
 class BackgroundTask(Thread):
-    def __init__(self, interval, task, max_repeat):
+    def __init__(self, interval, task, max_repeat, callback=None):
         assert callable(task)
 
         Thread.__init__(self)
@@ -13,6 +13,8 @@ class BackgroundTask(Thread):
         self.interval = interval
         self.task = task
         self.max_repeat = max_repeat
+        self.callback = callback
+        self.output = None 
 
     def stop(self):
         self.stopped.set()
@@ -34,9 +36,14 @@ class BackgroundTask(Thread):
             if inspect.iscoroutinefunction(self.task) \
                     or isinstance(type(self.task), Task) \
                     or issubclass(type(self.task), Task):
-                trio.run(self.task)
+                self.output = trio.run(self.task)
             else:
-                self.task()
+                self.output = self.task()
+
+        if self.callback:
+            t = Thread(target=self.callback)
+            t.daemon = True
+            t.start()
 
 
 class Background:
@@ -46,16 +53,17 @@ class Background:
     :interval: 
     """
 
-    def __init__(self, task, interval=None, max_repeat=-1):
+    def __init__(self, task, interval=None, max_repeat=-1, callback=None):
         assert callable(task), 'You have to transfer a callable instance or an mlchain.Task'
 
         self.task = task
         self.interval = interval
         self.max_repeat = max_repeat
+        self.callback = callback
 
     def run(self):
         task = BackgroundTask(interval=self.interval, task=self.task,
-                              max_repeat=self.max_repeat)
+                              max_repeat=self.max_repeat, callback=self.callback)
         task.start()
 
         return task

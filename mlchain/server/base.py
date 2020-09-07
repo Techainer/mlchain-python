@@ -7,7 +7,7 @@ from mlchain.base import ServeModel
 from mlchain.base.serializer import JsonSerializer, MsgpackSerializer, MsgpackBloscSerializer
 from mlchain.base.converter import Converter
 from mlchain.base.exceptions import MLChainAssertionError
-
+import numpy as np 
 
 class MLChainResponse:
     '''
@@ -133,8 +133,16 @@ class MLServer:
         for key, value in list(kwargs.items()):
             if key in inspect_func_.parameters:
                 req_type = inspect_func_.parameters[key].annotation
-                if value != inspect_func_.parameters[key].default:
-                    kwargs[key] = self.convert(value, req_type)
+                the_default = inspect_func_.parameters[key].default
+
+                if type(value) != req_type: 
+                    eq = value == the_default
+                    
+                    if isinstance(eq, np.ndarray): 
+                        if not np.all(eq): 
+                            kwargs[key] = self.convert(value, req_type)
+                    elif not eq: 
+                        kwargs[key] = self.convert(value, req_type)
             elif not accept_kwargs:
                 suggest = None
                 fuzz = 0
