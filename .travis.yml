@@ -32,7 +32,7 @@ jobs:
       install:
         - pip install -U pylint pylint-exit 
       script:
-        - pylint --output-format=text *.py 2>&1 | pylint-exit $?
+        - pylint --output-format=text *.py || pylint-exit $? 
     - stage: build
       name: "Build"
       install:
