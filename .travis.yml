@@ -4,48 +4,51 @@ arch:
 python:
   - 3.6
   - 3.7
+
+# os:
+#   - linux
+#   - osx
+
+install:
+  - sudo apt update
+  - sudo apt install software-properties-common
+  - sudo apt update
+  - sudo apt install --no-install-recommends build-essential gcc wget git
+  - wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
+  - sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main
+  - sudo apt update && sudo apt install --no-install-recommends cmake
+
+stages:
+  - sanity_check
+  - build
+  - test
+  - name: deploy
+    if: branch = master
+
 jobs:
   include:
-    #  ====== WINDOWS =========
-    - name: "Python 3.6.8 on Windows"
-      os: windows           # Windows 10.0.17134 N/A Build 17134
-      language: shell       # 'language: python' is an error on Travis CI Windows
-      before_install:
-        - choco install python --version 3.6.8
-        - python -m pip install scikit-build
-        - python -m pip install pytest pylint
+    - stage: sanity_check
+      name: "Sanity check"
       install:
-        - python --version
-        - python -m pip install .
+        - pip install -U pylint pylint-exit 
+      script:
+        - pylint --output-format=text *.py 2>&1 | pylint-exit $?
+    - stage: build
+      name: "Build"
+      install:
+        - pip install -U scikit-build awscli
+        - pip install -r requirements.txt
+      script:
+        - python setup.py bdist_wheel
+      after_success:
+        - aws s3 cp ./dist/* s3://techainer-packages/mlchain-python-temp/ --acl public-read
+    - stage: test
+      name: "Test"
+      install:
+        - pip install pytest coverage codecov
       script:
         - pylint mlchain
-        - pytest tests/
-      env: PATH=/c/Python36:/c/Python36/Scripts:$PATH
-    - name: "Python 3.7.4 on Windows"
-      os: windows           # Windows 10.0.17134 N/A Build 17134
-      language: shell       # 'language: python' is an error on Travis CI Windows
-      before_install:
-        - choco install python --version 3.7.4
-        - python -m pip install scikit-build
-        - python -m pip install pytest pylint
-      install:
-        - python --version
-        - python -m pip install .
-      script:
-        - pylint mlchain
-        - pytest tests/
-      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
-
-before_install:
-  - sudo apt-get update
-  - sudo apt-get install -y software-properties-common
-  - sudo apt-get update
-  - sudo apt-get install -y --no-install-recommends build-essential gcc
-  - pip install scikit-build
-  - pip install pytest pylint
-install:
-  - python --version
-  - pip install .
-script:
-  - pylint mlchain
-  - pytest tests/
+        - python -m coverage run --source=. -m unittest discover
+        - python -m coverage report
+      after_success:
+        - codecov
