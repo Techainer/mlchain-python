@@ -24,12 +24,12 @@ class HttpClient(MLClient):
                 self.api_address = 'http://{0}'.format(api_address)
 
         self.content_type = 'application/{0}'.format(self.serializer_type)
-        try:
-            ping = self.get('ping', timeout=5)
-            logger.info("Connected to server {0}: {1}".format(api_address, ping))
-        except Exception as e:
-            logger.info("Can't connect to server {0}: {1}".format(api_address, e))
         if check_status:
+            try:
+                ping = self.get('ping', timeout=5)
+                logger.info("Connected to server {0}: {1}".format(api_address, ping))
+            except Exception as e:
+                logger.info("Can't connect to server {0}: {1}".format(api_address, e))
             output_description = self.get('description', timeout=20)
             if 'error' in output_description:
                 with except_handler():

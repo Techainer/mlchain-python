@@ -15,11 +15,12 @@ class GrpcClient(MLClient):
                           version=version, check_status=check_status, **kwargs)
         self.channel = grpc.insecure_channel(api_address)
         self.stub = mlchain_pb2_grpc.MLChainServiceStub(self.channel)
-        try:
-            ping = self.get('ping')
-            logger.info("Connect to server: {0}".format(ping))
-        except Exception as e:
-            logger.info("Can't connect to server: {0}".format(e))
+        if check_status:
+            try:
+                ping = self.get('ping')
+                logger.info("Connect to server: {0}".format(ping))
+            except Exception as e:
+                logger.info("Can't connect to server: {0}".format(e))
 
     def _get(self, api_name, headers=None, timeout=None):
         """
