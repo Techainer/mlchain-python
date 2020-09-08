@@ -17,7 +17,9 @@ class BackgroundTask(Thread):
         self.callback = callback
         self.output = None 
         self.pool_limit = ThreadPoolExecutor(max_workers=max_thread)
-        self.pool_limit_callback = ThreadPoolExecutor(max_workers=1)
+
+        if callback is not None:
+            self.pool_limit_callback = ThreadPoolExecutor(max_workers=1)
 
     def stop(self):
         self.stopped.set()
@@ -60,7 +62,9 @@ class BackgroundTask(Thread):
                     self.pool_limit.submit(self.get_output, self.task)
         
         self.pool_limit.shutdown(wait=True)
-        self.pool_limit_callback.shutdown(wait=True)
+
+        if self.callback is not None:
+            self.pool_limit_callback.shutdown(wait=True)
 
 class Background:
     """
