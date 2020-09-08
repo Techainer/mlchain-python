@@ -1,9 +1,9 @@
 language: python
 arch:
   - amd64
-python:
-  - 3.6
-  - 3.7
+# python:
+#   - 3.6
+#   - 3.7
 
 # os:
 #   - linux
@@ -15,7 +15,7 @@ install:
   - sudo apt update
   - sudo apt install --no-install-recommends build-essential gcc wget git
   - wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
-  - sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main
+  - sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
   - sudo apt update && sudo apt install --no-install-recommends cmake
 
 stages:
@@ -40,14 +40,14 @@ jobs:
         - pip install -r requirements.txt
       script:
         - python setup.py bdist_wheel
-      after_success:
-        - aws s3 cp ./dist/* s3://techainer-packages/mlchain-python-temp/ --acl public-read
+      # after_success:
+      #   - aws s3 cp ./dist/* s3://techainer-packages/mlchain-python-temp/ --acl public-read
     - stage: test
       name: "Test"
       install:
         - pip install pytest coverage codecov
       script:
-        - pylint mlchain
+        - python setup.py install
         - python -m coverage run --source=. -m unittest discover
         - python -m coverage report
       after_success:
