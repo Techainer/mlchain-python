@@ -13,7 +13,7 @@ class Step:
     def __init__(self, func, max_thread:int=1, max_calls:int=None, interval:float=1.0):
         """
         Initialize step with func and max_threads
-        :max_calls: Maximum call step in interval 
+        :max_calls: Maximum call step in interval, fps = max_calls / interval
         """
         self.func = func
         self.max_thread = max_thread

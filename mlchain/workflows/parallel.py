@@ -196,9 +196,9 @@ class Parallel:
                 self.show_progress_bar = True
                 self.progress_bar = TrioProgress(total=len(self.tasks),
                                                  notebook_mode=notebook_mode)
-            async_result = []
-            for idx, task in enumerate(self.tasks):
-                async_result.append(pool.apply_async(self.exec_task, args=[task, idx]))
+
+            async_result = [pool.apply_async(self.exec_task, args=[task, idx]) for idx, task in enumerate(self.tasks)]
+
             results = []
             for result in async_result:
                 output = result.get()
