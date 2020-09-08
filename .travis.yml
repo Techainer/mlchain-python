@@ -45,7 +45,7 @@ jobs:
     - stage: test
       name: "Test"
       install:
-        - pip install pytest coverage codecov
+        - pip install scikit-build pytest coverage codecov
       script:
         - python setup.py install
         - python -m coverage run --source=. -m unittest discover
