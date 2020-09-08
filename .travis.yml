@@ -1,22 +1,15 @@
 language: python
 arch:
   - amd64
-# python:
-#   - 3.6
-#   - 3.7
 
-# os:
-#   - linux
-#   - osx
-
-install:
-  - sudo apt update
-  - sudo apt install software-properties-common
-  - sudo apt update
-  - sudo apt install --no-install-recommends build-essential gcc wget git
-  - wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
-  - sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
-  - sudo apt update && sudo apt install --no-install-recommends cmake
+# install:
+#   - sudo apt update
+#   - sudo apt install software-properties-common
+#   - sudo apt update
+#   - sudo apt install --no-install-recommends build-essential gcc wget git
+#   - wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
+#   - sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
+#   - sudo apt update && sudo apt install --no-install-recommends cmake
 
 stages:
   - sanity_check
@@ -29,21 +22,23 @@ jobs:
   include:
     - stage: sanity_check
       name: "Sanity check"
+      python: 3.7
       install:
         - pip install -U pylint pylint-exit 
       script:
         - pylint --output-format=text *.py || pylint-exit $? 
     - stage: build
       name: "Build"
+      python: 3.7
       install:
         - pip install -U scikit-build awscli
         - pip install -r requirements.txt
       script:
         - python setup.py bdist_wheel
-      # after_success:
-      #   - aws s3 cp ./dist/* s3://techainer-packages/mlchain-python-temp/ --acl public-read
+        - python setup.py install
     - stage: test
       name: "Test"
+      python: 3.7
       install:
         - pip install scikit-build pytest coverage codecov
       script:
