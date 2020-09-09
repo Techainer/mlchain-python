@@ -44,6 +44,7 @@ jobs:
         - pip install -U attrs==19.1.0
       script:
         - python setup.py install
+        - pytest --version
         - python -m coverage run --source=. -m unittest discover
         - python -m coverage report
       after_success:
