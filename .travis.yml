@@ -6,7 +6,7 @@ stages:
   - sanity_check
   - build
   - test
-
+  - deploy
 
 jobs:
   include:
@@ -129,11 +129,13 @@ jobs:
       after_success:
         - codecov
 
-deploy:
-  - provider: pypi
-    username: __token__
-    password:
-        secure: lEK5DTFYmn2vkeP8OrG8CPgUOH/PvhO76OO5F2/K3HbQxJZLH3Vsmzk/mRsY1pIC52XpGLDSg/8d62V9bu2WNReLRQJZ1zIgKSswvf4USrsd0axGwIbJyuX+vr81/x4j4rQr3ohfb2zOIit7JoDrRugwBICSAEukNfXoOZdN6wVn4zpLsW/bdlrNlIsNmhzUBKfurRMPEqsSE1Bq2dDGmyd4KNiZlaJF4PEgNQHfV9qwW2+j/ky4ulCzFgIfxKUpIfvUPFN3Uw3HdaJAaOH6h+S84hvi30xwD8bT8os990fK0zZ/sW5e0ogRckmkGh3jDJcXzyCPetAABMkUjwTrIkehQ2I2QhT49V0+Qqq3A3iJFAGxufl3HEYNY4ZVxo7PXMBIkmA6TdKomhPLh1nKeQTaFomSvoY/Usnc5pF1Va5vhHUz2mGeUgnbR0kQPN2d3yF6hVvl2TnM4Ml0YK2sQa4og4xYOouBGqJsATTZ7OEdG/Iha1KpQRwkHaWs+FShGs1UL0UZO5+FYVSd6va3i1IPxZLoZzJBPscclKBJbrtfup7cWRO2LEeS1uzS0NEKGTmrZLmOW8m9o0Pt+F61pU8meG3O+n0CxYGrytUSNvCrMA0+ZT9DY0hF9Q08w7AASG+zZVarwhnFDakeNq91Z1GLGxB+mD3vIa5mslZGYMw=
-    on:
-      tags: true
-      branch: master
+    - stage: deploy
+      name:  "Deploy to PyPI"
+      deploy:
+        - provider: pypi
+          username: __token__
+          password:
+              secure: lEK5DTFYmn2vkeP8OrG8CPgUOH/PvhO76OO5F2/K3HbQxJZLH3Vsmzk/mRsY1pIC52XpGLDSg/8d62V9bu2WNReLRQJZ1zIgKSswvf4USrsd0axGwIbJyuX+vr81/x4j4rQr3ohfb2zOIit7JoDrRugwBICSAEukNfXoOZdN6wVn4zpLsW/bdlrNlIsNmhzUBKfurRMPEqsSE1Bq2dDGmyd4KNiZlaJF4PEgNQHfV9qwW2+j/ky4ulCzFgIfxKUpIfvUPFN3Uw3HdaJAaOH6h+S84hvi30xwD8bT8os990fK0zZ/sW5e0ogRckmkGh3jDJcXzyCPetAABMkUjwTrIkehQ2I2QhT49V0+Qqq3A3iJFAGxufl3HEYNY4ZVxo7PXMBIkmA6TdKomhPLh1nKeQTaFomSvoY/Usnc5pF1Va5vhHUz2mGeUgnbR0kQPN2d3yF6hVvl2TnM4Ml0YK2sQa4og4xYOouBGqJsATTZ7OEdG/Iha1KpQRwkHaWs+FShGs1UL0UZO5+FYVSd6va3i1IPxZLoZzJBPscclKBJbrtfup7cWRO2LEeS1uzS0NEKGTmrZLmOW8m9o0Pt+F61pU8meG3O+n0CxYGrytUSNvCrMA0+ZT9DY0hF9Q08w7AASG+zZVarwhnFDakeNq91Z1GLGxB+mD3vIa5mslZGYMw=
+          on:
+            tags: true
+            branch: master
