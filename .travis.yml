@@ -56,9 +56,9 @@ jobs:
     - stage: build
       name: "Build on Python 3.7 Windows"
       os: windows
-      language: minimal
+      language: shell
       before_install:
-        - choco install python3
+        - choco install python --version 3.7.4
         - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
       install:
         - python -m pip install -U scikit-build awscli pip --user
@@ -116,9 +116,9 @@ jobs:
     - stage: test
       name: "Test on Python 3.7 Windows"
       os: windows
-      language: minimal
+      language: shell
       before_install:
-        - choco install python3
+        - choco install python --version 3.7.4
         - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
       install:
         - python -m pip install -U scikit-build pytest coverage codecov pip
