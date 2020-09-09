@@ -53,6 +53,19 @@ jobs:
         - python3 setup.py bdist_wheel
         - python3 setup.py install
 
+    - stage: build
+      name: "Build on Python 3.7 Windows"
+      os: windows
+      language: minimal
+      install:
+        - choco install python3
+        - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+        - pip install -U scikit-build awscli pip
+        - pip install -U -r requirements.txt
+      script:
+        - python setup.py bdist_wheel
+        - python setup.py install
+
 
     - stage: test
       name: "Test on Python 3.7 Linux"
@@ -95,5 +108,21 @@ jobs:
         - pip3 install .
         - python3 -m coverage run --source=. -m unittest discover
         - python3 -m coverage report
+      after_success:
+        - codecov
+
+    - stage: test
+      name: "Test on Python 3.7 Windows"
+      os: windows
+      language: minimal
+      install:
+        - choco install python3
+        - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+        - pip install -U scikit-build pytest coverage codecov pip
+        - pip install -U attrs
+      script:
+        - pip install .
+        - python -m coverage run --source=. -m unittest discover
+        - python -m coverage report
       after_success:
         - codecov
