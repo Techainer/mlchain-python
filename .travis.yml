@@ -47,22 +47,12 @@ jobs:
       os: osx
       language: minimal
       install:
+        - python3 --version
         - pip3 install -U scikit-build awscli pip
         - pip3 install -U -r requirements.txt
       script:
         - python3 setup.py bdist_wheel
         - python3 setup.py install
-
-    - stage: build
-      name: "Build on Python 3.6 MacOS"
-      os: osx
-      python: 3.6
-      install:
-        - pip install -U scikit-build awscli pip
-        - pip install -U -r requirements.txt
-      script:
-        - python setup.py bdist_wheel
-        - python setup.py install
 
 
     - stage: test
@@ -74,7 +64,6 @@ jobs:
         - pip install -U attrs
       script:
         - pip install .
-        - pytest --version
         - python -m coverage run --source=. -m unittest discover
         - python -m coverage report
       after_success:
@@ -90,7 +79,6 @@ jobs:
         - pip install -U attrs
       script:
         - pip install .
-        - pytest --version
         - python -m coverage run --source=. -m unittest discover
         - python -m coverage report
       after_success:
@@ -102,28 +90,11 @@ jobs:
       os: osx
       python: 3.7
       install:
-        - pip install -U scikit-build pytest coverage codecov pip
-        - pip install -U attrs
+        - pip3 install -U scikit-build pytest coverage codecov pip
+        - pip3 install -U attrs
       script:
-        - pip install .
-        - pytest --version
-        - python -m coverage run --source=. -m unittest discover
-        - python -m coverage report
-      after_success:
-        - codecov
-
-
-    - stage: test
-      name: "Test on Python 3.6 MacOS"
-      os: osx
-      python: 3.6
-      install:
-        - pip install -U scikit-build pytest coverage codecov pip
-        - pip install -U attrs
-      script:
-        - pip install .
-        - pytest --version
-        - python -m coverage run --source=. -m unittest discover
-        - python -m coverage report
+        - pip3 install .
+        - python3 -m coverage run --source=. -m unittest discover
+        - python3 -m coverage report
       after_success:
         - codecov
