@@ -47,7 +47,6 @@ jobs:
       os: osx
       language: minimal
       install:
-        - python3 --version
         - pip3 install -U scikit-build awscli pip
         - pip3 install -U -r requirements.txt
       script:
@@ -88,7 +87,7 @@ jobs:
     - stage: test
       name: "Test on Python 3.7 MacOS"
       os: osx
-      python: 3.7
+      language: minimal
       install:
         - pip3 install -U scikit-build pytest coverage codecov pip
         - pip3 install -U attrs
