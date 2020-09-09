@@ -16,6 +16,7 @@
 [![PyPI version](https://badge.fury.io/py/mlchain.svg)](https://badge.fury.io/py/mlchain)
 [![Downloads](https://pepy.tech/badge/mlchain)](https://pepy.tech/project/mlchain)
 [![Build Status](https://travis-ci.org/Techainer/mlchain-python.svg?branch=master)](https://travis-ci.org/Techainer/mlchain-python)
+[![codecov](https://codecov.io/gh/Techainer/mlchain-python/branch/master/graph/badge.svg)](https://codecov.io/gh/Techainer/mlchain-python)
 [![Documentation Status](https://readthedocs.org/projects/mlchain/badge/?version=latest)](https://mlchain.readthedocs.io/en/latest/?badge=latest)
 [![license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Techainer/mlchain-python/blob/master/LICENSE)
 </div>
