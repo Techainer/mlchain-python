@@ -60,11 +60,12 @@ jobs:
       before_install:
         - choco install python3
         - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+        - virtualenv $HOME/venv
+        - source $HOME/venv/Scripts/activate
       install:
         - pip install -U scikit-build awscli pip --user
         - pip install -U -r requirements.txt --user
-        - virtualenv $HOME/venv
-        - source $HOME/venv/Scripts/activate
+
       script:
         - python setup.py bdist_wheel
         - python setup.py install
