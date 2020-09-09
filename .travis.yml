@@ -56,16 +56,13 @@ jobs:
     - stage: build
       name: "Build on Python 3.7 Windows"
       os: windows
-      language: sh
-      python: "3.7"
+      language: minimal
       before_install:
         - choco install python3
         - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
-        - virtualenv $HOME/venv
-        - source $HOME/venv/Scripts/activate
       install:
-        - pip install -U scikit-build awscli pip --user
-        - pip install -U -r requirements.txt --user
+        - python -m pip install -U scikit-build awscli pip --user
+        - python -m pip install -U -r requirements.txt --user
 
       script:
         - python setup.py bdist_wheel
@@ -124,10 +121,10 @@ jobs:
         - choco install python3
         - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
       install:
-        - pip install -U scikit-build pytest coverage codecov pip
-        - pip install -U attrs
+        - python -m pip install -U scikit-build pytest coverage codecov pip
+        - python -m pip install -U attrs
       script:
-        - pip install .
+        - python -m pip install .
         - python -m coverage run --source=. -m unittest discover
         - python -m coverage report
       after_success:
