@@ -2,19 +2,6 @@ language: python
 arch:
   - amd64
 
-os:
-  - linux
-  - osx
-
-# install:
-#   - sudo apt update
-#   - sudo apt install software-properties-common
-#   - sudo apt update
-#   - sudo apt install --no-install-recommends build-essential gcc wget git
-#   - wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
-#   - sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
-#   - sudo apt update && sudo apt install --no-install-recommends cmake
-
 stages:
   - sanity_check
   - build
@@ -26,13 +13,16 @@ jobs:
   include:
     - stage: sanity_check
       name: "Sanity check"
+      os: linux
       python: 3.7
       install:
         - pip install -U pylint pylint-exit 
       script:
         - pylint --output-format=text *.py || pylint-exit $? 
+
     - stage: build
-      name: "Build on Python 3.7"
+      name: "Build on Python 3.7 Linux"
+      os: linux
       python: 3.7
       install:
         - pip install -U scikit-build awscli pip
@@ -40,8 +30,10 @@ jobs:
       script:
         - python setup.py bdist_wheel
         - python setup.py install
+
     - stage: build
-      name: "Build on Python 3.6"
+      name: "Build on Python 3.6 Linux"
+      os: linux
       python: 3.6
       install:
         - pip install -U scikit-build awscli pip
@@ -49,8 +41,33 @@ jobs:
       script:
         - python setup.py bdist_wheel
         - python setup.py install
+
+    - stage: build
+      name: "Build on Python 3.7 MacOS"
+      os: osx
+      python: 3.7
+      install:
+        - pip install -U scikit-build awscli pip
+        - pip install -U -r requirements.txt
+      script:
+        - python setup.py bdist_wheel
+        - python setup.py install
+
+    - stage: build
+      name: "Build on Python 3.6 MacOS"
+      os: osx
+      python: 3.6
+      install:
+        - pip install -U scikit-build awscli pip
+        - pip install -U -r requirements.txt
+      script:
+        - python setup.py bdist_wheel
+        - python setup.py install
+
+
     - stage: test
-      name: "Test on Python 3.7"
+      name: "Test on Python 3.7 Linux"
+      os: linux
       python: 3.7
       install:
         - pip install -U scikit-build pytest coverage codecov pip
@@ -62,8 +79,43 @@ jobs:
         - python -m coverage report
       after_success:
         - codecov
+
+
     - stage: test
-      name: "Test on Python 3.6"
+      name: "Test on Python 3.6 Linux"
+      os: linux
+      python: 3.6
+      install:
+        - pip install -U scikit-build pytest coverage codecov pip
+        - pip install -U attrs
+      script:
+        - pip install .
+        - pytest --version
+        - python -m coverage run --source=. -m unittest discover
+        - python -m coverage report
+      after_success:
+        - codecov
+
+
+    - stage: test
+      name: "Test on Python 3.7 MacOS"
+      os: osx
+      python: 3.7
+      install:
+        - pip install -U scikit-build pytest coverage codecov pip
+        - pip install -U attrs
+      script:
+        - pip install .
+        - pytest --version
+        - python -m coverage run --source=. -m unittest discover
+        - python -m coverage report
+      after_success:
+        - codecov
+
+
+    - stage: test
+      name: "Test on Python 3.6 MacOS"
+      os: osx
       python: 3.6
       install:
         - pip install -U scikit-build pytest coverage codecov pip
