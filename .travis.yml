@@ -2,6 +2,10 @@ language: python
 arch:
   - amd64
 
+os:
+  - linux
+  - osx
+
 # install:
 #   - sudo apt update
 #   - sudo apt install software-properties-common
@@ -28,7 +32,7 @@ jobs:
       script:
         - pylint --output-format=text *.py || pylint-exit $? 
     - stage: build
-      name: "Build"
+      name: "Build on Python 3.7"
       python: 3.7
       install:
         - pip install -U scikit-build awscli pip
@@ -36,9 +40,31 @@ jobs:
       script:
         - python setup.py bdist_wheel
         - python setup.py install
+    - stage: build
+      name: "Build on Python 3.6"
+      python: 3.6
+      install:
+        - pip install -U scikit-build awscli pip
+        - pip install -U -r requirements.txt
+      script:
+        - python setup.py bdist_wheel
+        - python setup.py install
     - stage: test
-      name: "Test"
+      name: "Test on Python 3.7"
       python: 3.7
+      install:
+        - pip install -U scikit-build pytest coverage codecov pip
+        - pip install -U attrs
+      script:
+        - pip install .
+        - pytest --version
+        - python -m coverage run --source=. -m unittest discover
+        - python -m coverage report
+      after_success:
+        - codecov
+    - stage: test
+      name: "Test on Python 3.6"
+      python: 3.6
       install:
         - pip install -U scikit-build pytest coverage codecov pip
         - pip install -U attrs
