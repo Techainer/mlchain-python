@@ -133,6 +133,8 @@ jobs:
       if: tag IS present
       name:  "Deploy to PyPI"
       python: 3.7
+      script:
+        - echo "Already tested before"
       deploy:
         - provider: pypi
           username: __token__
