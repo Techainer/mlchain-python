@@ -57,9 +57,10 @@ jobs:
       name: "Build on Python 3.7 Windows"
       os: windows
       language: minimal
-      install:
+      before_install:
         - choco install python3
         - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+      install:
         - pip install -U scikit-build awscli pip
         - pip install -U -r requirements.txt
       script:
