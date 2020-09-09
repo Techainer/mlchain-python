@@ -45,13 +45,13 @@ jobs:
     - stage: build
       name: "Build on Python 3.7 MacOS"
       os: osx
-      python: 3.7
+      language: minimal
       install:
-        - pip install -U scikit-build awscli pip
-        - pip install -U -r requirements.txt
+        - pip3 install -U scikit-build awscli pip
+        - pip3 install -U -r requirements.txt
       script:
-        - python setup.py bdist_wheel
-        - python setup.py install
+        - python3 setup.py bdist_wheel
+        - python3 setup.py install
 
     - stage: build
       name: "Build on Python 3.6 MacOS"
