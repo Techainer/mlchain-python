@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 from setuptools import setup, find_packages
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 project = "mlchain"
 
