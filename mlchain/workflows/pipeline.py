@@ -43,7 +43,7 @@ class StepOutput:
         self.max_step_index = len(steps)
         self.step_max_thread_dict = step_max_thread_dict
         self.pass_fail_job = pass_fail_job
-        self.is_false = False
+        self.is_fail = False
 
         self.output = []
 
@@ -53,7 +53,7 @@ class StepOutput:
         self.is_available = True 
 
         if isinstance(self.output[-1].output, tuple) and len(self.output[-1].output) == 2 and self.output[-1].output[0] == "MLCHAIN_BACKGROUND_ERROR": 
-            self.is_false = True
+            self.is_fail = True
             self.current_step = self.max_step_index
             self.is_done = True 
             
@@ -126,14 +126,14 @@ class Pipeline(object):
             # Pop done processing and add into self.output_queue
             while len(self.processing_queue) > 0 and self.processing_queue[0].is_done: 
                 the_output = self.processing_queue.popleft()
-                if the_output.is_false and not pass_fail_job: 
+                if the_output.is_fail and not pass_fail_job: 
                     self.stop()
                     raise Exception("Pipeline error, stop now!")
 
                 check_having_update = True
 
                 if return_output: 
-                    if not the_output.is_false:
+                    if not the_output.is_fail:
                         self.output_queue.append(the_output)
                 else: 
                     del the_output
@@ -143,10 +143,10 @@ class Pipeline(object):
                 try:
                     input = next(inputs)
                 except StopIteration:
-                    logging.debug("Processing pipeline waiting because there's no input left")
+                    logging.info("Processing pipeline waiting because there's no input left")
                     if not loop_forever:
-                        logging.debug("Processing pipeline stop because there's no input left, if you want to loop forever, use loop_forever")
-                        self.running = False 
+                        logging.info("Processing pipeline stop because there's no input left, if you want to loop forever, use loop_forever")
+                        self.stop()
                     break 
             
                 check_having_update = True
@@ -157,7 +157,7 @@ class Pipeline(object):
 
             # Processing processing steps to next step
             for processing_step in self.processing_queue: 
-                if processing_step.is_false and not pass_fail_job: 
+                if processing_step.is_fail and not pass_fail_job: 
                     self.stop()
                     raise Exception("Pipeline error, stop now!")
 
@@ -174,7 +174,7 @@ class Pipeline(object):
             if self.processing_queue[0].is_done:
                 the_output = self.processing_queue.popleft()
 
-                if the_output.is_false and not pass_fail_job: 
+                if the_output.is_fail and not pass_fail_job: 
                     self.stop()
                     raise Exception("Pipeline error, stop now!")
 
