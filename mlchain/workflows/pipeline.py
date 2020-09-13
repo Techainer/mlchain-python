@@ -36,12 +36,13 @@ class Step:
         return time.time() > self.accept_next_call
 
 class StepOutput: 
-    def __init__(self, steps, step_max_thread_dict): 
+    def __init__(self, steps, step_max_thread_dict, pass_fail_job:bool=False): 
         self.steps = steps
         self.current_step = 0
         self.is_available = True 
         self.max_step_index = len(steps)
         self.step_max_thread_dict = step_max_thread_dict
+        self.pass_fail_job = pass_fail_job
 
         self.output = []
 
@@ -60,14 +61,14 @@ class StepOutput:
         self.step_max_thread_dict[self.current_step] -= 1 
 
         if not self.is_done:
-            self.output.append(Background(Task(self.steps[self.current_step], input), callback=SyncTask(self.increase_current_step, callback)).run())
+            self.output.append(Background(Task(self.steps[self.current_step], input), callback=SyncTask(self.increase_current_step, callback)).run(pass_fail_job=self.pass_fail_job))
 
     def call_next_step(self, callback=None): 
         self.is_available = False
         self.step_max_thread_dict[self.current_step] -= 1 
 
         if not self.is_done:
-            self.output.append(Background(Task(self.steps[self.current_step], self.output[-1].output), callback=SyncTask(self.increase_current_step, callback)).run())
+            self.output.append(Background(Task(self.steps[self.current_step], self.output[-1].output), callback=SyncTask(self.increase_current_step, callback)).run(pass_fail_job=self.pass_fail_job))
 
     @property
     def is_done(self): 
@@ -90,7 +91,7 @@ class Pipeline(object):
         # When the pipeline is running loop forever, this is the way to stop it 
         self.running = False
 
-    def run(self, inputs, max_processing_queue:int=1000, return_output:bool=True, loop_forever:bool=False): 
+    def run(self, inputs, max_processing_queue:int=1000, return_output:bool=True, loop_forever:bool=False, pass_fail_job:bool=False): 
         inputs = iter(inputs)
         
         self.running = True 
@@ -122,7 +123,7 @@ class Pipeline(object):
                     break 
             
                 check_having_update = True
-                the_step_output = StepOutput(steps = self.steps, step_max_thread_dict=self.step_max_thread_dict)
+                the_step_output = StepOutput(steps = self.steps, step_max_thread_dict=self.step_max_thread_dict, pass_fail_job=pass_fail_job)
                 the_step_output.call_first_step(input)
 
                 self.processing_queue.append(the_step_output)

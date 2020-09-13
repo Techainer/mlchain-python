@@ -4,9 +4,11 @@ import trio
 from .task import Task
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
+import logging 
+import traceback 
 
 class BackgroundTask(Thread):
-    def __init__(self, interval, task, max_repeat, callback=None, max_thread:int=1):
+    def __init__(self, interval, task, max_repeat, callback=None, max_thread:int=1, pass_fail_job:bool=False):
         assert callable(task)
 
         Thread.__init__(self)
@@ -17,6 +19,7 @@ class BackgroundTask(Thread):
         self.callback = callback
         self.output = None 
         self.pool_limit = ThreadPoolExecutor(max_workers=max_thread)
+        self.pass_fail_job = pass_fail_job 
 
         if callback is not None:
             self.pool_limit_callback = ThreadPoolExecutor(max_workers=1)
@@ -31,40 +34,46 @@ class BackgroundTask(Thread):
             self.pool_limit_callback.submit(self.callback)
 
     def run(self):
-        if self.interval is not None:
-            count_repeat = 0
-            while (self.max_repeat < 0 or count_repeat < self.max_repeat) \
-                    and (not self.stopped.wait(self.interval.total_seconds())):
+        try:
+            if self.interval is not None:
+                count_repeat = 0
+                while (self.max_repeat < 0 or count_repeat < self.max_repeat) \
+                        and (not self.stopped.wait(self.interval.total_seconds())):
 
-                if isinstance(type(self.task), Task) \
-                    or issubclass(type(self.task), Task):
-                        if inspect.iscoroutinefunction(self.task.func_): 
+                    if isinstance(type(self.task), Task) \
+                        or issubclass(type(self.task), Task):
+                            if inspect.iscoroutinefunction(self.task.func_): 
+                                self.pool_limit.submit(self.get_output, trio.run, self.task)
+                            else:
+                                self.pool_limit.submit(self.get_output, self.task.func_, *self.task.args, **self.task.kwargs)
+                    else: 
+                        if inspect.iscoroutinefunction(self.task):
                             self.pool_limit.submit(self.get_output, trio.run, self.task)
                         else:
-                            self.pool_limit.submit(self.get_output, self.task.func_, *self.task.args, **self.task.kwargs)
+                            self.pool_limit.submit(self.get_output, self.task)
+                    count_repeat += 1
+            else:
+                if isinstance(type(self.task), Task) \
+                        or issubclass(type(self.task), Task):
+                            if inspect.iscoroutinefunction(self.task.func_): 
+                                self.pool_limit.submit(self.get_output, trio.run, self.task)
+                            else:
+                                self.pool_limit.submit(self.get_output, self.task.func_, *self.task.args, **self.task.kwargs)
                 else: 
-                    if inspect.iscoroutinefunction(self.task):
+                    if inspect.iscoroutinefunction(self.task): 
                         self.pool_limit.submit(self.get_output, trio.run, self.task)
                     else:
                         self.pool_limit.submit(self.get_output, self.task)
-                count_repeat += 1
-        else:
-            if isinstance(type(self.task), Task) \
-                    or issubclass(type(self.task), Task):
-                        if inspect.iscoroutinefunction(self.task.func_): 
-                            self.pool_limit.submit(self.get_output, trio.run, self.task)
-                        else:
-                            self.pool_limit.submit(self.get_output, self.task.func_, *self.task.args, **self.task.kwargs)
+            
+            self.pool_limit.shutdown(wait=True)
+        except Exception as ex: 
+            if self.pass_fail_job: 
+                logging.error("BACKGROUND TASK ERROR {0}".format(traceback.format_exc()))
             else: 
-                if inspect.iscoroutinefunction(self.task): 
-                    self.pool_limit.submit(self.get_output, trio.run, self.task)
-                else:
-                    self.pool_limit.submit(self.get_output, self.task)
-        
-        self.pool_limit.shutdown(wait=True)
+                raise ex 
 
-        if self.callback is not None:
-            self.pool_limit_callback.shutdown(wait=True)
+            if self.callback is not None:
+                self.pool_limit_callback.shutdown(wait=True)
 
 class Background:
     """
@@ -87,9 +96,9 @@ class Background:
         self.max_repeat = max_repeat
         self.callback = callback
 
-    def run(self, max_thread:int=1):
+    def run(self, max_thread:int=1, pass_fail_job:bool=False):
         task = BackgroundTask(interval=self.interval, task=self.task,
-                              max_repeat=self.max_repeat, callback=self.callback, max_thread=max_thread)
+                              max_repeat=self.max_repeat, callback=self.callback, max_thread=max_thread, pass_fail_job=pass_fail_job)
         task.start()
 
         return task
