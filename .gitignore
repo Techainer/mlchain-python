@@ -7,3 +7,4 @@ mlchain.egg-info
 .pyc
 test/*
 .pytest_cache
+**/.DS_Store
