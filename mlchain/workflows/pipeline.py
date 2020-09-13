@@ -10,7 +10,7 @@ class Step:
     """
     Step of a Pipeline 
     """
-    def __init__(self, func, max_thread:int=1, max_calls:int=None, interval:float=1.0, pass_fail_job:bool=False):
+    def __init__(self, func, max_thread:int=1, max_calls:int=None, interval:float=1.0):
         """
         Initialize step with func and max_threads
         :max_calls: Maximum call step in interval, fps = max_calls / interval
@@ -19,7 +19,6 @@ class Step:
         self.max_thread = max_thread
         self.max_calls = max_calls 
         self.interval = interval
-        self.pass_fail_job = pass_fail_job
         
         if max_calls is not None: 
             self.interval_time = self.period / self.max_calls
@@ -37,12 +36,14 @@ class Step:
         return time.time() > self.accept_next_call
 
 class StepOutput: 
-    def __init__(self, steps, step_max_thread_dict): 
+    def __init__(self, steps, step_max_thread_dict, pass_fail_job:bool=False): 
         self.steps = steps
         self.current_step = 0
         self.is_available = True 
         self.max_step_index = len(steps)
         self.step_max_thread_dict = step_max_thread_dict
+        self.pass_fail_job = pass_fail_job
+        self.is_false = False
 
         self.output = []
 
@@ -50,6 +51,14 @@ class StepOutput:
         self.step_max_thread_dict[self.current_step] += 1
         self.current_step += 1
         self.is_available = True 
+
+        if isinstance(self.output[-1].output, tuple) and len(self.output[-1].output) == 2 and self.output[-1].output[0] == "MLCHAIN_BACKGROUND_ERROR": 
+            self.is_false = True
+            self.current_step = self.max_step_index
+            self.is_done = True 
+            
+            if not self.pass_fail_job: 
+                raise Exception("Mlchain Pipeline error, stop here!")
 
         if callback:
             t = threading.Thread(target=callback)
@@ -61,14 +70,13 @@ class StepOutput:
         self.step_max_thread_dict[self.current_step] -= 1 
 
         if not self.is_done:
-            self.output.append(Background(Task(self.steps[self.current_step], input), callback=SyncTask(self.increase_current_step, callback)).run(pass_fail_job=self.steps[self.current_step].pass_fail_job))
+            self.output.append(Background(Task(self.steps[self.current_step], input), callback=SyncTask(self.increase_current_step, callback)).run(pass_fail_job=self.pass_fail_job))
 
     def call_next_step(self, callback=None): 
         self.is_available = False
         self.step_max_thread_dict[self.current_step] -= 1 
-
-        if not self.is_done:
-            self.output.append(Background(Task(self.steps[self.current_step], self.output[-1].output), callback=SyncTask(self.increase_current_step, callback)).run(pass_fail_job=self.steps[self.current_step].pass_fail_job))
+      
+        self.output.append(Background(Task(self.steps[self.current_step], self.output[-1].output), callback=SyncTask(self.increase_current_step, callback)).run(pass_fail_job=self.pass_fail_job))
 
     @property
     def is_done(self): 
@@ -82,6 +90,9 @@ class StepOutput:
 
 class Pipeline(object): 
     def __init__(self, *steps: Step): 
+        """
+        Pipeline multiple steps 
+        """
         if len(steps) == 0:
             raise ValueError('Input Pipeline should have at least one Step!')
 
@@ -91,7 +102,18 @@ class Pipeline(object):
         # When the pipeline is running loop forever, this is the way to stop it 
         self.running = False
 
-    def run(self, inputs, max_processing_queue:int=1000, return_output:bool=True, loop_forever:bool=False): 
+    def stop(self): 
+        """ Stop a Pipeline """
+        self.running = False 
+
+    def run(self, inputs, max_processing_queue:int=1000, return_output:bool=True, loop_forever:bool=False, pass_fail_job:bool=False): 
+        """
+        :inputs: A list or an iterator 
+        :max_processing_queue: Max of queue for processing task 
+        :return_output: Return output or not 
+        :loop_forever: Loop forever or not, for infinite inputs
+        :pass_fail_job: Only logging the failure job, not stop pipeline 
+        """
         inputs = iter(inputs)
         
         self.running = True 
@@ -104,10 +126,15 @@ class Pipeline(object):
             # Pop done processing and add into self.output_queue
             while len(self.processing_queue) > 0 and self.processing_queue[0].is_done: 
                 the_output = self.processing_queue.popleft()
+                if the_output.is_false and not pass_fail_job: 
+                    self.stop()
+                    raise Exception("Pipeline error, stop now!")
+
                 check_having_update = True
 
                 if return_output: 
-                    self.output_queue.append(the_output)
+                    if not the_output.is_false:
+                        self.output_queue.append(the_output)
                 else: 
                     del the_output
 
@@ -123,13 +150,17 @@ class Pipeline(object):
                     break 
             
                 check_having_update = True
-                the_step_output = StepOutput(steps = self.steps, step_max_thread_dict=self.step_max_thread_dict)
+                the_step_output = StepOutput(steps = self.steps, step_max_thread_dict=self.step_max_thread_dict, pass_fail_job=pass_fail_job)
                 the_step_output.call_first_step(input)
-
+                
                 self.processing_queue.append(the_step_output)
 
             # Processing processing steps to next step
             for processing_step in self.processing_queue: 
+                if processing_step.is_false and not pass_fail_job: 
+                    self.stop()
+                    raise Exception("Pipeline error, stop now!")
+
                 if processing_step.need_call: 
                     check_having_update = True
                     processing_step.call_next_step()
@@ -143,8 +174,13 @@ class Pipeline(object):
             if self.processing_queue[0].is_done:
                 the_output = self.processing_queue.popleft()
 
-                if return_output: 
-                    self.output_queue.append(the_output)
+                if the_output.is_false and not pass_fail_job: 
+                    self.stop()
+                    raise Exception("Pipeline error, stop now!")
+
+                if return_output and len(the_output.output) == self.max_step_index: 
+                    if not the_output.is_fail:
+                        self.output_queue.append(the_output)
                 else: 
                     del the_output
             else: 
