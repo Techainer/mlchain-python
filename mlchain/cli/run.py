@@ -71,7 +71,7 @@ op_mode = click.option('--mode', '-m', 'mode', default=None, type=str)
 op_api_format = click.option('--api_format', '-a', 'api_format', default=None, type=str)
 
 
-@click.command("run", short_help="Run a development server.")
+@click.command("run", short_help="Run a development server.", context_settings={"ignore_unknown_options": True})
 @click.argument('entry_file', nargs=1, required=False, default=None)
 @op_host
 @op_port
@@ -90,6 +90,10 @@ op_api_format = click.option('--api_format', '-a', 'api_format', default=None, t
 @click.argument('kws', nargs=-1)
 def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 name, mode, api_format, ngrok, kws):
+    kws = list(kws)
+    if isinstance(entry_file, str) and not os.path.exists(entry_file):
+        kws = [entry_file] + kws
+        entry_file = None
     from mlchain import config as mlconfig
     default_config = False
     if config is None:
@@ -108,6 +112,16 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
         if mode in config['mode']['env']:
             config['mode']['default'] = mode
     mlconfig.load_config(config)
+    for kw in kws:
+        if kw.startswith('--'):
+            tokens = kw[2:].split('=', 1)
+            if len(tokens) == 2:
+                key, value = tokens
+                mlconfig.mlconfig.update({key: value})
+            else:
+                raise AssertionError("Unexpected param {0}".format(kw))
+        else:
+            raise AssertionError("Unexpected param {0}".format(kw))
     model_id = mlconfig.get_value(None, config, 'model_id', None)
     entry_file = mlconfig.get_value(entry_file, config, 'entry_file', 'server.py')
     host = mlconfig.get_value(host, config, 'host', 'localhost')
