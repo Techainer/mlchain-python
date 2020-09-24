@@ -7,8 +7,6 @@ from .http_client import HttpClient
 class Client(HttpClient, GrpcClient):
     def __init__(self, api_key=None, api_address=None, serializer='json', timeout=5 * 60, headers=None, type='http',
                  name: str = "", version: str = "", check_status=False):
-        logger.warn("mlchain.client.Client is deprecated and will be remove in the next version. "
-                    "Please use mlchain.client.HttpModel instead")
         assert isinstance(type, str), "type model must be a string"
         self._api_key = api_key
         self._api_address = api_address
