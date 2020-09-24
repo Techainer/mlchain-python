@@ -6,7 +6,7 @@ __version__ = "0.1.7"
 project = "mlchain"
 
 def readme():
-    with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as f:
+    with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
         return f.read()
 
 def parse_requirements(filename):
@@ -21,7 +21,8 @@ setup(
     version=__version__,
     description='MLchain Python Library',
     long_description=readme(),
-    url='https://gitlab.com/techainer/ml_platform/mlchain-python',
+    long_description_content_type='text/markdown',
+    url='http://github.com/Techainer/mlchain-python',
     author='Techainer Inc.',
     author_email='admin@techainer.com',
     package_data={'mlchain.cli': ['config.yaml'],'mlchain.server':['static/*','templates/*','templates/swaggerui/*']},
