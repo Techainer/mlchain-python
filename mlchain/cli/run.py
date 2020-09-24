@@ -131,11 +131,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
         bind = None
     bind = mlconfig.get_value(bind, config, 'bind', [])
     wrapper = mlconfig.get_value(wrapper, config, 'wrapper', None)
-    workers = mlconfig.get_value(workers, config, 'workers', None)
-    if workers is None:
-        workers = 1
-    else:
-        workers = int(workers)
+    workers = mlconfig.get_value(workers, config['gunicorn'], 'workers', None)
+    if workers is None and 'hypercorn' in config.keys():
+        workers = mlconfig.get_value(workers, config['hypercorn'], 'workers', None)
+    workers = int(workers) if workers is not None else 1
     name = mlconfig.get_value(name, config, 'name', None)
     cors = mlconfig.get_value(None, config, 'cors', False)
 
