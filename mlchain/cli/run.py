@@ -261,7 +261,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                           static_url_path=static_url_path,
                           static_folder=static_folder,
                           template_folder=template_folder)
-        app.run(host, port, bind=bind, cors=cors, workers=workers,
+        app.run(host, port, bind=bind, cors=cors,
                 gunicorn=False, hypercorn=True, **config.get('hypercorn', {}), model_id=model_id)
 
     app = get_model(entry_file)
