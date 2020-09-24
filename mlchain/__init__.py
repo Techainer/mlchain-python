@@ -12,9 +12,3 @@ from .context import mlchain_context
 
 from .base.exceptions import *
 from .config import mlconfig
-
-try:
-    import torch
-    torch.set_num_thread(1)
-except Exception as e:
-    pass
