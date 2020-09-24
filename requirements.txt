@@ -52,3 +52,4 @@ fuzzywuzzy
 GPUtil
 tqdm
 pyngrok
+python-Levenshtein
