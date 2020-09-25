@@ -56,10 +56,18 @@ class TestClient(unittest.TestCase):
         time.sleep(3)
 
         # Test normal client
-        model = Client(api_address='http://localhost:12345').model(check_status=True)
+        model = Client(api_address='http://localhost:12345', serializer='json').model(check_status=True)
         input_image = np.ones((200, 200), dtype=np.uint8)
         result_image = model.predict(input_image)
         assert result_image.shape == (100, 100)
+
+        model = Client(api_address='http://localhost:12345', serializer='msgpack').model(check_status=True)
+        result_image_2 = model.predict(input_image)
+        assert result_image_2.shape == (100, 100)
+
+        model = Client(api_address='http://localhost:12345', serializer='msgpack_blosc').model(check_status=True)
+        result_image_3 = model.predict(input_image)
+        assert result_image_3.shape == (100, 100)
 
         # Test client with exception
         try:
