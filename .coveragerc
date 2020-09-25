@@ -1,3 +1,6 @@
 [run]
 omit =
     tests/*
+    setup.py
+    mlchain/__main__.py
+concurrency = multiprocessing

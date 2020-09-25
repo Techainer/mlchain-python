@@ -10,3 +10,4 @@ test/*
 **/.DS_Store
 htmlcov
 .coverage
+.coverage.*
