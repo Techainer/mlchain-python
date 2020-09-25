@@ -43,7 +43,7 @@ class BaseConfig(dict):
 
     def from_yaml(self, path):
         import yaml
-        self.update(yaml.load(open(path)))
+        self.update(yaml.load(open(path), Loader=yaml.FullLoader))
 
     def update(self, data):
         for k, v in data.items():
@@ -134,12 +134,14 @@ def load_config(data):
 
 def load_json(path):
     import json
-    return json.load(open(path, encoding='utf-8'))
+    with open(path, encoding='utf-8') as f:
+        return json.load(f)
 
 
 def load_yaml(path):
     import yaml
-    return yaml.load(open(path))
+    with open(path) as f:
+        return yaml.load(f, Loader=yaml.FullLoader)
 
 
 def load_file(path):

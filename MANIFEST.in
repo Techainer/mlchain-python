@@ -1,4 +1,4 @@
-include LICENSE *.rst *.toml *.yml *.yaml
+include LICENSE *.rst *.md *.toml *.yml *.yaml
 include requirements.txt
 graft .github
 

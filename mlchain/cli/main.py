@@ -17,22 +17,21 @@ def get_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
 
-    message = "Python %(python)s\nMlChain %(mlchain)s\nFlask %(flask)s\nQuart %(quart)s\nGrpc %(grpc)s"
+    message = "Python %(python)s\nMlChain %(mlchain)s\nFlask %(flask)s\nQuart %(quart)s\n"
     click.echo(
         message
         % {
             "python": platform.python_version(),
             "mlchain": __version__,
             "flask": flask.__version__,
-            "quart": quart.__version__,
-            "grpc": grpc.__version__
+            "quart": quart.__version__
         },
         color=ctx.color,
     )
     ctx.exit()
 
 
-def main(as_module=False):
+def main(as_module=False, is_testing=False):
     version_option = click.Option(
         ["--version"],
         help="Show the mlchain version",
@@ -46,8 +45,9 @@ def main(as_module=False):
     cli.add_command(init_command)
     cli.add_command(artifact_command)
     cli.add_command(serve_command)
+    if is_testing:
+        return cli
     cli.main(args=sys.argv[1:], prog_name="python -m mlchain" if as_module else None)
 
-
 if __name__ == "__main__":
-    main(as_module=True)
+    cli = main(as_module=True)

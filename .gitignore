@@ -8,3 +8,6 @@ mlchain.egg-info
 test/*
 .pytest_cache
 **/.DS_Store
+htmlcov
+.coverage
+.coverage.*

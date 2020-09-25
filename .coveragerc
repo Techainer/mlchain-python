@@ -1,0 +1,8 @@
+[run]
+omit =
+    */site-packages/*
+    */distutils/*
+    tests/*
+    setup.py
+    mlchain/__main__.py
+concurrency = multiprocessing

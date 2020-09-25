@@ -131,11 +131,13 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
         bind = None
     bind = mlconfig.get_value(bind, config, 'bind', [])
     wrapper = mlconfig.get_value(wrapper, config, 'wrapper', None)
-    workers = mlconfig.get_value(workers, config, 'workers', None)
-    if workers is None:
-        workers = 1
-    else:
-        workers = int(workers)
+    if wrapper == 'gunicorn' and os.name == 'nt':
+        logger.warning('Gunicorn warper are not supported on Windows. Switching to None instead.')
+        wrapper = None
+    workers = mlconfig.get_value(workers, config['gunicorn'], 'workers', None)
+    if workers is None and 'hypercorn' in config.keys():
+        workers = mlconfig.get_value(workers, config['hypercorn'], 'workers', None)
+    workers = int(workers) if workers is not None else 1
     name = mlconfig.get_value(name, config, 'name', None)
     cors = mlconfig.get_value(None, config, 'cors', False)
 
@@ -262,7 +264,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                           static_url_path=static_url_path,
                           static_folder=static_folder,
                           template_folder=template_folder)
-        app.run(host, port, bind=bind, cors=cors, workers=workers,
+        app.run(host, port, bind=bind, cors=cors,
                 gunicorn=False, hypercorn=True, **config.get('hypercorn', {}), model_id=model_id)
 
     app = get_model(entry_file)
