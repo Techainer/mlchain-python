@@ -131,6 +131,9 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
         bind = None
     bind = mlconfig.get_value(bind, config, 'bind', [])
     wrapper = mlconfig.get_value(wrapper, config, 'wrapper', None)
+    if wrapper == 'gunicorn' and os.name == 'nt':
+        logger.warning('Gunicorn warper are not supported on Windows. Switching to None instead.')
+        wrapper = None
     workers = mlconfig.get_value(workers, config['gunicorn'], 'workers', None)
     if workers is None and 'hypercorn' in config.keys():
         workers = mlconfig.get_value(workers, config['hypercorn'], 'workers', None)
