@@ -47,8 +47,11 @@ def test_breaking_process(runner, cli, args, new_pwd, prog_name, wait_time=10):
 class TestClient(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
+        self.is_windows = os.name == 'nt'
 
     def test_client(self):
+        if self.is_windows:
+            return 0
         import numpy as np
         from mlchain.client import Client
         task = Task(test_breaking_process, runner, cli, args='run'.split(), new_pwd='tests/dummy_server', prog_name='python -m mlchain')

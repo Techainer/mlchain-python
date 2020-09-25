@@ -10,6 +10,7 @@ logger = logging.getLogger()
 class TestCLI(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
+        self.is_windows = os.name == 'nt'
 
     def test_mlchain_version(self):
         cli = main(is_testing=True)
@@ -26,6 +27,8 @@ class TestCLI(unittest.TestCase):
             assert result.exit_code == 0
 
     def test_mlchain_run(self):
+        if self.is_windows:
+            return 0
         cli = main(is_testing=True)
         runner = CliRunner()
         test_breaking_process(runner, cli, args='run'.split(), new_pwd='tests/dummy_server', prog_name='python -m mlchain')
