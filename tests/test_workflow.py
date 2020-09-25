@@ -89,7 +89,8 @@ class TestWorkflow(unittest.TestCase):
         background = Background(task, interval=0.1).run()
         time.sleep(1)
         logger.info(x)
-        assert x == list(range(10))*10
+        assert x[:10] == list(range(10))
+        assert len(x) > 10
         background.stop()
 
     def test_mlchain_background_pass_fail_job(self):
