@@ -134,12 +134,14 @@ def load_config(data):
 
 def load_json(path):
     import json
-    return json.load(open(path, encoding='utf-8'))
+    with open(path, encoding='utf-8') as f:
+        return json.load(f)
 
 
 def load_yaml(path):
     import yaml
-    return yaml.load(open(path), Loader=yaml.FullLoader)
+    with open(path) as f:
+        return yaml.load(f, Loader=yaml.FullLoader)
 
 
 def load_file(path):

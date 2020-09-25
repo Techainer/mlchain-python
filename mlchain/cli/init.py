@@ -14,4 +14,5 @@ def init_command(file):
         logger.warning("File {} exists. Please change name file".format(file))
     else:
         with open(file, 'wb') as fp:
-            fp.write(open(os.path.join(root_path, 'config.yaml'), 'rb').read())
+            with open(os.path.join(root_path, 'config.yaml'), 'rb') as fr:
+                fp.write(fr.read())
