@@ -110,7 +110,7 @@ jobs:
       script:
         - pip3 install .
         - python3 -m coverage run --source=. -m unittest discover
-        - python -m coverage combine
+        - python3 -m coverage combine
         - python3 -m coverage report
       after_success:
         - codecov
