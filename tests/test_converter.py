@@ -1,8 +1,11 @@
-from mlchain.base.converter import Converter, get_type
+import logging
 import unittest
 from typing import *
-import numpy as np
 
+import numpy as np
+from mlchain.base.converter import Converter, get_type
+
+logger = logging.getLogger()
 
 def check_type(value, t):
     t_origin, t_args = get_type(t)
@@ -24,6 +27,7 @@ class TestConverter(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         self.converter = Converter()
         unittest.TestCase.__init__(self, *args, **kwargs)
+        logger.info("Running converter test")
 
     def test_list(self):
         print(get_type(Union[dict, list]))
