@@ -201,7 +201,11 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                     self.cfg.set(key.lower(), value)
 
             def load(self):
-                os.environ['CUDA_VISIBLE_DEVICES'] = str(next(gpus))
+                original_cuda_variable = os.environ.get('CUDA_VISIBLE_DEVICES')
+                if original_cuda_variable is None:
+                    os.environ['CUDA_VISIBLE_DEVICES'] = str(next(gpus))
+                else:
+                    logger.info(f"Skipping automatic GPU selection for gunicorn worker since CUDA_VISIBLE_DEVICES environment variable is already set to {original_cuda_variable}")
                 serve_model = get_model(entry_file, serve_model=True)
                 if isinstance(serve_model, ServeModel):
                     if (not self.autofrontend) and model_id is not None:
