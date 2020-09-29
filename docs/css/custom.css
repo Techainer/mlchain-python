@@ -17,7 +17,6 @@ a.internal-link::after {
     padding-bottom: 2em;
 }
 
-<<<<<<< HEAD
 * {
     box-sizing: border-box;
   }
@@ -35,7 +34,6 @@ a.internal-link::after {
     display: table;
     clear: both;
   }
-=======
 .md-header-nav__button.md-logo img{
     height: 35px;
     width: 50px;
@@ -50,4 +48,3 @@ a {
     box-shadow: 0 0 0.2rem rgba(0,0,0,.1), 0 0.2rem 0.4rem rgba(0,0,0,.2) !important;
     transition: color 250ms,background-color 250ms,box-shadow 250ms !important;
 }
->>>>>>> 9733a0261b583b2283ceecbeb412badd74c53f0c
