@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 from mlchain.base.serializer import (JsonSerializer, MsgpackBloscSerializer,
                                      MsgpackSerializer)
+from mlchain.base.exceptions import MLChainSerializationError
 
 logger = logging.getLogger()
 
@@ -33,6 +34,13 @@ class TestSerializer(unittest.TestCase):
                 encoded = serializer.encode(data)
                 decoded = serializer.decode(encoded)
                 self.assertTrue(data==decoded,"{0}.encode: value: {1}".format(serializer.__class__.__name__,data))
+
+    def test_fail(self):
+        for serializer in self.serializers:
+            try:
+                encoded = serializer.encode(self)
+            except MLChainSerializationError:
+                pass
 
 
 if __name__ == '__main__':

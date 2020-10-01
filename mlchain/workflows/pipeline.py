@@ -65,6 +65,10 @@ class StepOutput:
             t.daemon = True
             t.start()
 
+        # Call next step 
+        if self.need_call:
+            self.call_next_step()
+        
     def call_first_step(self, input, callback=None): 
         self.is_available = False
         self.step_max_thread_dict[self.current_step] -= 1 
@@ -161,16 +165,12 @@ class Pipeline(object):
                     self.stop()
                     raise Exception("Pipeline error, stop now!")
 
-                if processing_step.need_call: 
-                    check_having_update = True
-                    processing_step.call_next_step()
-
             if not check_having_update: 
                 logging.debug("There's no done task update")
                 time.sleep(0.01)
 
         # Check already run all then return 
-        while len(self.processing_queue) > 0: 
+        while len(self.processing_queue) > 0:
             if self.processing_queue[0].is_done:
                 the_output = self.processing_queue.popleft()
 

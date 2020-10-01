@@ -9,7 +9,7 @@ root_path = os.path.dirname(__file__)
 @click.argument('file', nargs=1, required=False, default='mlconfig.yaml')
 def init_command(file):
     if file is None:
-        file = 'mlconfig.yaml'
+        file = 'mlconfig.yaml'  # pragma: no cover
     if os.path.exists(file):
         logger.warning("File {} exists. Please change name file".format(file))
     else:

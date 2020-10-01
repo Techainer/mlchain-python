@@ -26,7 +26,7 @@ hypercorn>=0.5.4
 grpcio==1.27.2
 protobuf>=3.10.0
 boto3>=1.9.66
-pyyaml
+pyyaml>=5.1
 fuzzywuzzy
 GPUtil
 tqdm
