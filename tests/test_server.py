@@ -16,6 +16,7 @@ from mlchain.server.flask_server import FlaskServer
 from mlchain.server.grpc_server import GrpcServer
 from mlchain.server.quart_server import QuartServer
 from mlchain.decorators import except_serving
+from mlchain.base.serve_model import batch,non_thread
 
 logger = logging.getLogger()
 
@@ -32,10 +33,24 @@ class Model():
         """
         image = cv2.resize(image, (100, 100))
         return image
-    
+
+    @non_thread()
+    def predict_non_thread(self, image: np.ndarray):
+        image = cv2.resize(image, (100, 100))
+        return image
+
+    @batch(name='predicts',variables={'images': np.ndarray},
+           default={'batch_size': 5}, variable_names={'images':'image'},
+           max_queue=100, max_batch_size=32)
+    def predict_batch(self, images: np.ndarray):
+        for image in images:
+            image = cv2.resize(image, (100, 100))
+        return images
+
     @except_serving
     def dummy(self):
         pass
+
 
 original_model = Model()
 
@@ -59,6 +74,12 @@ class TestServer(unittest.TestCase):
         self.is_not_windows = os.name != 'nt'
 
     def test_flask_server_init(self):
+        try:
+            abc = 1
+            model_abc = ServeModel(abc)
+        except AssertionError:
+            pass
+
         logger.info("Running flask server init test")
         model = ServeModel(original_model)
         flask_model = FlaskServer(model)

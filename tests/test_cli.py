@@ -26,6 +26,10 @@ class TestCLI(unittest.TestCase):
             logger.info('Output of `mlchain init`:\n' + str(result.output))
             assert result.exit_code == 0
 
+            result = runner.invoke(cli, args='init'.split(), prog_name='python -m mlchain')
+            logger.info('Output of `mlchain init` second time:\n' + str(result.output))
+            assert result.exit_code == 0
+
     def test_mlchain_run(self):
         if self.is_windows:
             return 0

@@ -112,24 +112,21 @@ class TestWorkflow(unittest.TestCase):
     def test_mlchain_pipeline(self):
         def step_1(i):
             time.sleep(0.001)
-            logger.info('step_1')
-            return i+1
+            return i * 2
 
         def step_2(i):
             time.sleep(0.001)
-            logger.info('step_2')
-            return i*2
+            return i * 2
 
         def step_3(i):
             time.sleep(0.001)
-            logger.info('step_3')
-            return i-2
+            return i + 1
 
         pipeline = Pipeline(
-            Step(step_1, max_thread = 2),
+            Step(step_1, max_thread = 1),
             Step(step_2, max_thread = 1),
             Step(step_3, max_thread = 1)
         )
-        # inputs = range(4)
-        # results = pipeline.run(inputs)
-        # logger.info(results)
+        inputs = range(20)
+        results = pipeline.run(inputs)
+        assert [x.output[-1].output for x in results] == [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77]

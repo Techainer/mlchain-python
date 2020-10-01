@@ -47,7 +47,7 @@ def main(as_module=False, is_testing=False):
     cli.add_command(serve_command)
     if is_testing:
         return cli
-    cli.main(args=sys.argv[1:], prog_name="python -m mlchain" if as_module else None)
+    cli.main(args=sys.argv[1:], prog_name="python -m mlchain" if as_module else None)  # pragma: no cover
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     cli = main(as_module=True)

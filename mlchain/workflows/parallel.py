@@ -8,7 +8,7 @@ from mlchain.base.log import format_exc, except_handler, logger
 class TrioProgress(trio.abc.Instrument):
 
     def __init__(self, total, notebook_mode=False, **kwargs):
-        if notebook_mode:
+        if notebook_mode:  # pragma: no cover
             from tqdm.notebook import tqdm
         else:
             from tqdm import tqdm
