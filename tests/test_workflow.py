@@ -104,6 +104,14 @@ class TestWorkflow(unittest.TestCase):
         logger.info(x)
         background.stop()
 
+        try:
+            background = Background(task, interval=0.01).run(pass_fail_job=False)
+            time.sleep(0.02)
+            logger.info(x)
+            background.stop()
+        except:
+            pass
+
     def test_mlchain_async_task(self):
         async def dummy_task(n):
             return n+1
