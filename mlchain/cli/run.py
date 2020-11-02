@@ -2,6 +2,7 @@ import os
 import click
 import importlib
 import sys
+import copy
 import GPUtil
 from mlchain import logger
 from mlchain.server import MLServer
@@ -92,25 +93,33 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 name, mode, api_format, ngrok, kws):
     kws = list(kws)
     if isinstance(entry_file, str) and not os.path.exists(entry_file):
-        kws = [entry_file] + kws
+        kws = [f'--entry_file={entry_file}'] + kws
         entry_file = None
     from mlchain import config as mlconfig
     default_config = False
+
     if config is None:
         default_config = True
         config = 'mlconfig.yaml'
 
-    if os.path.isfile(config):
-        config = mlconfig.load_file(config)
+    config_path = copy.deepcopy(config)
+    if os.path.isfile(config_path) and os.path.exists(config_path):
+        config = mlconfig.load_file(config_path)
         if config is None:
-            raise AssertionError("Not support file config {0}".format(config))
+            raise SystemExit("Config file {0} are not supported".format(config_path))
     else:
         if not default_config:
-            raise FileNotFoundError("Not found file {0}".format(config))
-        config = {}
+            raise SystemExit("Can't find config file {0}".format(config_path))
+        else:
+            raise SystemExit("Can't find mlchain config file. Please double check your current working directory. Or use `mlchain init` to initialize a new ones here.")
     if 'mode' in config and 'env' in config['mode']:
         if mode in config['mode']['env']:
             config['mode']['default'] = mode
+        elif mode is not None:
+            available_mode = list(config['mode']['env'].keys())
+            available_mode = [each for each in available_mode if each != 'default']
+            raise SystemExit(
+                f"No {mode} mode are available. Found these mode in config file: {available_mode}")
     mlconfig.load_config(config)
     for kw in kws:
         if kw.startswith('--'):
@@ -124,6 +133,8 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
             raise AssertionError("Unexpected param {0}".format(kw))
     model_id = mlconfig.get_value(None, config, 'model_id', None)
     entry_file = mlconfig.get_value(entry_file, config, 'entry_file', 'server.py')
+    if not os.path.exists(entry_file):
+        raise SystemExit(f"Entry file {entry_file} not found in current working directory.")
     host = mlconfig.get_value(host, config, 'host', 'localhost')
     port = mlconfig.get_value(port, config, 'port', 5000)
     server = mlconfig.get_value(server, config, 'server', 'flask')
