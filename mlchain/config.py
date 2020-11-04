@@ -98,7 +98,10 @@ class MLConfig(BaseConfig):
                 for mode in ['default', default]:
                     if mode in data['mode']['env']:
                         for k, v in data['mode']['env'][mode].items():
-                            environ[k] = str(v)
+                            if k in environ:
+                                data['mode']['env'][mode][k] = environ[k]
+                            else:
+                                environ[k] = str(v)
                         self.update(data['mode']['env'][mode])
 
     def get_client_config(self, name):
@@ -128,7 +131,10 @@ def load_config(data):
             for mode in ['default', default]:
                 if mode in data['mode']['env']:
                     for k, v in data['mode']['env'][mode].items():
-                        environ[k] = str(v)
+                        if k in environ:
+                            data['mode']['env'][mode][k] = environ[k]
+                        else:
+                            environ[k] = str(v)
                     mlconfig.update(data['mode']['env'][mode])
 
 
