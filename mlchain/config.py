@@ -13,29 +13,27 @@ class BaseConfig(dict):
         r = self.get_item(item)
         if r is not None:
             return r
+
         r = self.get_item(item.upper())
         if r is not None:
             return r
+
         r = self.get_item(item.lower())
         if r is not None:
             return r
+
+        if item.upper() in self:
+            return self[item.upper()]
+            
         r = self.get_default(item)
         return r
 
     def get_item(self, item):
-        if item.upper() in self:
-            return self[item.upper()]
-
-        r = environ.get(self.env_key.upper() + item)
-        if r is not None:
-            return r
-
-        r = environ.get(self.env_key.lower() + item)
-        if r is not None:
-            return r
-
         r = environ.get(item)
-        return r
+        if r is not None:
+            return r
+
+        return None 
 
     def from_json(self, path):
         import json
@@ -116,8 +114,10 @@ def load_config(data):
         env_key = config.env_key.strip('_').lower()
         if env_key in data:
             config.update(data[env_key])
+            
     if 'clients' in data:
         mlconfig.update_client(data['clients'])
+
     if 'mode' in data:
         if 'default' in data['mode']:
             default = data['mode']['default']
@@ -127,8 +127,6 @@ def load_config(data):
         if 'env' in data['mode']:
             for mode in ['default', default]:
                 if mode in data['mode']['env']:
-                    for k, v in data['mode']['env'][mode].items():
-                        environ[k] = str(v)
                     mlconfig.update(data['mode']['env'][mode])
 
 

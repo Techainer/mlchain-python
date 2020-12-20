@@ -1,0 +1,45 @@
+# Service Config 
+name: mlchain-server     # Name of service
+version: '0.0.1'         # Version of service 
+entry_file: mlchain_server.py    # Python file contains object ServeModel
+
+# Host and Port Config
+host: localhost          # Host of service
+port: 8001               # Port service
+
+# Server config 
+server: flask            # Option flask or quart or grpc
+wrapper: None            # Option None or gunicorn or hypercorn
+cors: true
+static_folder:           # static folder for TemplateResponse
+static_url_path:         # static url path for TemplateResponse
+template_folder:         # template folder for TemplateResponse
+
+# Gunicorn config - Use gunicorn for general case
+gunicorn: 
+  timeout: 120
+  keepalive: 10
+  max_requests: 0
+  threads: 1
+  worker_class: 'gthread'
+bind:
+  - 'unix:/tmp/gunicorn.sock' # Using sock to make gunicorn faster 
+
+# Hypercorn config - Use hypercorn for async server with Quart 
+hypercorn: 
+  timeout: 120
+  keepalive: 10
+  threads: 50
+  worker_class: 'uvloop'
+
+# Mlconfig - Use these mode and config or env to adaptive your code 
+# You can import mlconfig and use as variable. Ex: mlconfig.debug 
+mode: 
+  default: dev
+  env:
+    default:
+      test: "Hello"
+    dev:
+      debug: True
+    prod: 
+      debug: False

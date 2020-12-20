@@ -25,7 +25,7 @@ setup(
     url='http://github.com/Techainer/mlchain-python',
     author='Techainer Inc.',
     author_email='admin@techainer.com',
-    package_data={'mlchain.cli': ['config.yaml'],'mlchain.server':['static/*','templates/*','templates/swaggerui/*']},
+    package_data={'mlchain.cli': ['mlconfig.yaml', 'mlchain_server.py'],'mlchain.server':['static/*','templates/*','templates/swaggerui/*']},
     include_package_data=True,
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     install_requires=install_requires,
