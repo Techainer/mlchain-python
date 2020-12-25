@@ -71,7 +71,7 @@ def except_handler():
     sys.excepthook = sys.__excepthook__
 
 
-def format_exc(name='mlchain', tb=None, exception=None):
+def format_exc(name='mlchain', tb=None, exception=None, return_str=True):
     if exception is None:
         formatted_lines = traceback.format_exc().splitlines()
     else:
@@ -89,4 +89,7 @@ def format_exc(name='mlchain', tb=None, exception=None):
     output = []
     for x in formatted_lines:
         output.append(x)
+
+    if return_str:
+        return "\n".join(output)
     return output

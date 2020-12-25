@@ -33,9 +33,7 @@ class Task:
         """
         Task's process code
         """
-        transaction = Hub.current.scope.transaction
-
-        with transaction.start_child(op="task", description="{0}".format(self.func_.__name__)) as span:
+        async def _call_func(): 
             if inspect.iscoroutinefunction(self.func_) \
                     or (not inspect.isfunction(self.func_)
                         and hasattr(self.func_, '__call__')
@@ -44,6 +42,14 @@ class Task:
                     return await self.func_(*self.args, **self.kwargs)
             with self:
                 return self.func_(*self.args, **self.kwargs)
+
+        transaction = Hub.current.scope.transaction
+
+        if transaction is not None:
+            with transaction.start_child(op="task", description="{0}".format(self.func_.__name__)) as span:
+                return await _call_func()
+        else: 
+            return await _call_func()
 
     async def __aenter__(self):
         return self.__enter__()

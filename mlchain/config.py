@@ -121,10 +121,10 @@ def load_config(data):
         "MLCHAIN_SERVER_VERSION": data.get("version", "0.0.1")
     })
 
-    if 'default' in data['mode']:
-        default = data['mode']['default']
-    else:
-        default = 'default'
+    default = 'default'
+    if 'mode' in data:
+        if 'default' in data['mode']:
+            default = data['mode']['default']
 
     mlconfig.update({
         "MLCHAIN_DEFAULT_MODE": default
