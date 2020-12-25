@@ -132,10 +132,10 @@ def load_config(data):
 
     if "sentry" in data: 
         mlconfig.update({
-            "MLCHAIN_SENTRY_DSN": data['sentry'].get("dsn", os.getenv("SENTRY_DSN", None)), 
-            "MLCHAIN_SENTRY_TRACES_SAMPLE_RATE": data['sentry'].get("traces_sample_rate", os.getenv("SENTRY_TRACES_SAMPLE_RATE", 0.1)), 
-            "MLCHAIN_SENTRY_SAMPLE_RATE": data['sentry'].get("sample_rate", os.getenv("SENTRY_SAMPLE_RATE", 1.0)),
-            "MLCHAIN_SENTRY_DROP_MODULES": data['sentry'].get("drop_modules", os.getenv("SENTRY_DROP_MODULES", 'True')) not in ['False', 'false', False]
+            "MLCHAIN_SENTRY_DSN": os.getenv("SENTRY_DSN", data['sentry'].get("dsn", None)), 
+            "MLCHAIN_SENTRY_TRACES_SAMPLE_RATE": os.getenv("SENTRY_TRACES_SAMPLE_RATE", data['sentry'].get("traces_sample_rate", 0.1)), 
+            "MLCHAIN_SENTRY_SAMPLE_RATE": os.getenv("SENTRY_SAMPLE_RATE", data['sentry'].get("sample_rate", 1.0)),
+            "MLCHAIN_SENTRY_DROP_MODULES": os.getenv("SENTRY_DROP_MODULES", data['sentry'].get("drop_modules", 'True')) not in ['False', 'false', False]
         })
 
     for config in all_configs:
