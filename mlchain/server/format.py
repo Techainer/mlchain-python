@@ -1,10 +1,25 @@
 from typing import List, Tuple, Dict
 import traceback
 from mlchain import logger, __version__
+from mlchain.base.log import sentry_ignore_logger
 from mlchain.base.serializer import JsonSerializer, MsgpackSerializer, MsgpackBloscSerializer
 from mlchain.base.exceptions import MLChainSerializationError, MlChainError
 from .base import RawResponse, JsonResponse, MLChainResponse
+from sentry_sdk import add_breadcrumb, capture_exception
+import re
+import os
 
+def logging_error(exception): 
+    string_exception = "\n".join(exception)
+    sentry_ignore_logger.error(string_exception)
+
+    # Log to sentry
+    add_breadcrumb(
+        category="500", 
+        message="\n".join([x for x in exception if re.search(r"(site-packages\/mlchain\/)|(\/envs\/)|(\/anaconda)", x) is None]),
+        level='error',
+    )
+    capture_exception(RuntimeError("API error"))
 
 class BaseFormat:
     def check(self, headers, form, files, data) -> bool:
@@ -48,18 +63,22 @@ class BaseFormat:
                 }
                 return JsonResponse(output, exception.status_code)
             if isinstance(exception, Exception):
-                error = ''.join(traceback.extract_tb(exception.__traceback__).format()).strip()
+                error = traceback.extract_tb(exception.__traceback__).format()
                 output = {
                     'error': error,
                     'api_version': request_context.get('api_version'),
                     'mlchain_version': __version__
                 }
+                logging_error(error)
                 return JsonResponse(output, 500)
+
+            exception = exception.split("\n")
             output = {
-                'error': str(exception),
+                'error': exception,
                 'api_version': request_context.get('api_version'),
                 'mlchain_version': __version__
             }
+            logging_error(exception)
             return JsonResponse(output, 500)
 
 
@@ -121,20 +140,25 @@ class MLchainFormat(BaseFormat):
                 status = exception.status_code
 
             elif isinstance(exception, Exception):
-                error = ''.join(traceback.extract_tb(exception.__traceback__).format()).strip()
+                error = traceback.extract_tb(exception.__traceback__).format()
                 output = {
                     'error': error,
                     'api_version': request_context.get('api_version'),
                     'mlchain_version': __version__
                 }
                 status = 500
+
+                logging_error(error)
             else:
+                exception = exception.split("\n")
+                logging_error(exception)
                 output = {
-                    'error': str(exception),
+                    'error': exception,
                     'api_version': request_context.get('api_version'),
                     'mlchain_version': __version__
                 }
                 status = 500
+                
 
         serializer_type = headers.get('mlchain-serializer', 'json')
         serializer = self.serializers.get(serializer_type, None)

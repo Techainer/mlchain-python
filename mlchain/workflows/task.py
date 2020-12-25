@@ -1,7 +1,7 @@
 import inspect
 import trio
 from mlchain import mlchain_context
-
+from sentry_sdk import Hub
 
 class Task:
     """
@@ -33,14 +33,17 @@ class Task:
         """
         Task's process code
         """
-        if inspect.iscoroutinefunction(self.func_) \
-                or (not inspect.isfunction(self.func_)
-                    and hasattr(self.func_, '__call__')
-                    and inspect.iscoroutinefunction(self.func_.__call__)):
-            async with self:
-                return await self.func_(*self.args, **self.kwargs)
-        with self:
-            return self.func_(*self.args, **self.kwargs)
+        transaction = Hub.current.scope.transaction
+
+        with transaction.start_child(op="task", description="{0}".format(self.func_.__name__)) as span:
+            if inspect.iscoroutinefunction(self.func_) \
+                    or (not inspect.isfunction(self.func_)
+                        and hasattr(self.func_, '__call__')
+                        and inspect.iscoroutinefunction(self.func_.__call__)):
+                async with self:
+                    return await self.func_(*self.args, **self.kwargs)
+            with self:
+                return self.func_(*self.args, **self.kwargs)
 
     async def __aenter__(self):
         return self.__enter__()

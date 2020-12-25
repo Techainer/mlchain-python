@@ -7,7 +7,7 @@ gunicorn>=20.0.4
 h2==3.2.0
 Jinja2>=2.10.3
 MarkupSafe>=1.1.1
-msgpack==1.0.0
+msgpack==1.0.2
 numpy<=1.18.1
 opencv-python>=4.1.2.30
 Pillow==6.0.0
@@ -23,12 +23,14 @@ uvloop>=0.14.0; sys_platform != 'win32'
 Werkzeug>=0.15.0
 httpx==0.13.3
 hypercorn>=0.5.4
-grpcio==1.27.2
+grpcio
 protobuf>=3.10.0
 boto3>=1.9.66
 pyyaml>=5.1
+sentry-sdk[flask]>=0.19.5
 fuzzywuzzy
 GPUtil
 tqdm
 pyngrok
 python-Levenshtein
+pynvml

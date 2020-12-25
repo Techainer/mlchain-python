@@ -1,7 +1,6 @@
 import contextvars
 from copy import deepcopy
 
-
 class MLChainContext:
     variables = contextvars.ContextVar("mlchain_variables")
 
@@ -63,7 +62,7 @@ class MLChainContext:
         variables.update(vars)
         self.variables.set(variables)
 
-    def get(self):
+    def to_dict(self):
         try:
             variables = self.variables.get()
             if variables is None:
@@ -83,6 +82,9 @@ class MLChainContext:
 
     def set(self, variables):
         self.variables.set(variables)
+
+    def __getattr__(self, item):
+        return self.__getitem__(item)
 
 
 mlchain_context = MLChainContext()

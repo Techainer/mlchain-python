@@ -6,7 +6,6 @@ from mlchain.base.log import except_handler, logger
 from mlchain.server.base import RawResponse, JsonResponse
 from .base import MLClient
 
-
 class HttpClient(MLClient):
     def __init__(self, api_key=None, api_address=None, serializer='msgpack',
                  image_encoder=None, name=None, version='lastest',
@@ -142,6 +141,9 @@ class HttpClient(MLClient):
         if not self.check_response_ok(output):
             if output.status_code == 404:
                 raise Exception("This request url is not found")
+            else: 
+                raise Exception("There 's some error when calling, please check: \n HTTP ERROR: {0} \n DETAIL: ".format(output.status_code, output.content))
+
             return output.content
 
         return output.content

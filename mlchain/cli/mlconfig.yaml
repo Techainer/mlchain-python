@@ -17,8 +17,8 @@ template_folder:         # template folder for TemplateResponse
 
 # Gunicorn config - Use gunicorn for general case
 gunicorn: 
-  timeout: 120
-  keepalive: 10
+  timeout: 200
+  keepalive: 3
   max_requests: 0
   threads: 1
   worker_class: 'gthread'
@@ -31,6 +31,13 @@ hypercorn:
   keepalive: 10
   threads: 50
   worker_class: 'uvloop'
+
+# Sentry logging 
+sentry: 
+  dsn: None # URI Sentry of the project or export SENTRY_DSN
+  traces_sample_rate: 0.1 # Default log 0.1 
+  sample_rate: 1.0 # Default 1.0
+  drop_modules: True # Drop python requirements to lower the size of log 
 
 # Mlconfig - Use these mode and config or env to adaptive your code 
 # You can import mlconfig and use as variable. Ex: mlconfig.debug 

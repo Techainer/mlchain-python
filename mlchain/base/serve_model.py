@@ -311,7 +311,7 @@ class ServeModel:
         function_name, uid = function_name_, id_
         if function_name is None:
             raise AssertionError("You need to specify the function name (API name)")
-        mlchain_context['context_id'] = uid
+
         if isinstance(function_name, str):
             if len(function_name) == 0:
                 if hasattr(self.model, '__call__') and callable(getattr(self.model, '__call__')):
@@ -339,7 +339,7 @@ class ServeModel:
         function_name, uid = function_name_, id_
         if function_name is None:
             raise MLChainAssertionError("You need to specify the function name (API name)")
-        mlchain_context['context_id'] = uid
+
         if isinstance(function_name, str):
             if len(function_name) == 0:
                 if hasattr(self.model, '__call__') and callable(getattr(self.model, '__call__')):

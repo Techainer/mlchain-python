@@ -1,7 +1,13 @@
 import os
 from os import environ
 from collections import defaultdict
-
+from .base.log import logger
+import datetime
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+import datetime
+from sentry_sdk.integrations.wsgi import SentryWsgiMiddleware
+from mlchain.utils.system_info import get_gpu_statistics
 
 class BaseConfig(dict):
     def __init__(self, env_key='', **kwargs):
@@ -110,6 +116,28 @@ all_configs = [object_storage_config]
 
 
 def load_config(data):
+    mlconfig.update({
+        "MLCHAIN_SERVER_NAME": data.get("name", 'mlchain-server'), 
+        "MLCHAIN_SERVER_VERSION": data.get("version", "0.0.1")
+    })
+
+    if 'default' in data['mode']:
+        default = data['mode']['default']
+    else:
+        default = 'default'
+
+    mlconfig.update({
+        "MLCHAIN_DEFAULT_MODE": default
+    })
+
+    if "sentry" in data: 
+        mlconfig.update({
+            "MLCHAIN_SENTRY_DSN": data['sentry'].get("dsn", os.getenv("SENTRY_DSN", None)), 
+            "MLCHAIN_SENTRY_TRACES_SAMPLE_RATE": data['sentry'].get("traces_sample_rate", os.getenv("SENTRY_TRACES_SAMPLE_RATE", 0.1)), 
+            "MLCHAIN_SENTRY_SAMPLE_RATE": data['sentry'].get("sample_rate", os.getenv("SENTRY_SAMPLE_RATE", 1.0)),
+            "MLCHAIN_SENTRY_DROP_MODULES": data['sentry'].get("drop_modules", os.getenv("SENTRY_DROP_MODULES", 'True')) not in ['False', 'false', False]
+        })
+
     for config in all_configs:
         env_key = config.env_key.strip('_').lower()
         if env_key in data:
@@ -119,16 +147,43 @@ def load_config(data):
         mlconfig.update_client(data['clients'])
 
     if 'mode' in data:
-        if 'default' in data['mode']:
-            default = data['mode']['default']
-        else:
-            default = 'default'
-
         if 'env' in data['mode']:
             for mode in ['default', default]:
                 if mode in data['mode']['env']:
                     mlconfig.update(data['mode']['env'][mode])
+    
+    if mlconfig.MLCHAIN_SENTRY_DSN is not None and data.get('wrapper', None) != 'gunicorn': 
+        init_sentry()
 
+def before_send(event, hint): 
+    if mlconfig.MLCHAIN_SENTRY_DROP_MODULES: 
+        event['modules'] = {}
+
+    event['extra']["gpuinfo"] = get_gpu_statistics()
+    return event
+
+def init_sentry(): 
+    logger.debug("Initializing Sentry to {0} and traces_sample_rate: {1} and sample_rate: {2} and drop_modules: {3}".format(mlconfig.MLCHAIN_SENTRY_DSN, mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_DROP_MODULES))
+    sentry_sdk.init(
+        dsn=mlconfig.MLCHAIN_SENTRY_DSN,
+        integrations=[FlaskIntegration()],
+        sample_rate=mlconfig.MLCHAIN_SENTRY_SAMPLE_RATE,
+        traces_sample_rate=mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE,
+        server_name=mlconfig.MLCHAIN_SERVER_NAME,
+        environment=mlconfig.MLCHAIN_DEFAULT_MODE, 
+        before_send=before_send
+    )
+
+    sentry_sdk.set_context(
+        key = "app", 
+        value = {
+            "app_start_time": datetime.datetime.now(),
+            "app_name": mlconfig.MLCHAIN_SERVER_NAME,
+            "app_version": mlconfig.MLCHAIN_SERVER_VERSION,
+        }
+    )
+    logger.info("Initialized Sentry to {0} and traces_sample_rate: {1}".format(mlconfig.MLCHAIN_SENTRY_DSN, mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE))
+    
 
 def load_json(path):
     import json

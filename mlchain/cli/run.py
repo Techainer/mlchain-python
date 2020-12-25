@@ -200,6 +200,9 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 for key, value in config.items():
                     self.cfg.set(key.lower(), value)
 
+                from mlchain.base.gunicorn_config import on_starting
+                self.cfg.set("on_starting", on_starting)
+
             def load(self):
                 original_cuda_variable = os.environ.get('CUDA_VISIBLE_DEVICES')
                 if original_cuda_variable is None:
@@ -259,6 +262,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
             if 'uvicorn' in gunicorn_config['worker_class']:
                 logger.warning("Can't use flask with uvicorn. change to gthread")
                 gunicorn_config['worker_class'] = 'gthread'
+        
         GunicornWrapper(server, bind=bind, **gunicorn_config).run()
     elif wrapper == 'hypercorn' and server == 'quart':
         from mlchain.server.quart_server import QuartServer
