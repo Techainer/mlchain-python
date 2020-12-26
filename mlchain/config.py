@@ -156,8 +156,6 @@ def load_config(data):
                     for k, v in data['mode']['env'][mode].items():
                         if k in environ:
                             data['mode']['env'][mode][k] = environ[k]
-                        else:
-                            environ[k] = str(v)
                     mlconfig.update(data['mode']['env'][mode])
     
     if mlconfig.MLCHAIN_SENTRY_DSN is not None and data.get('wrapper', None) != 'gunicorn': 

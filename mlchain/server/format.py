@@ -19,7 +19,18 @@ def logging_error(exception):
         message="\n".join([x for x in exception if re.search(r"(site-packages\/mlchain\/)|(\/envs\/)|(\/anaconda)", x) is None]),
         level='error',
     )
-    capture_exception(RuntimeError("API error"))
+
+    try: 
+        the_exception_1 = exception[-2]
+    except: 
+        the_exception_1 = ""
+
+    try: 
+        the_exception_2 = exception[-1]
+    except: 
+        the_exception_2 = ""
+
+    capture_exception(RuntimeError("{0} {1}".format(the_exception_1, the_exception_2)))
 
 class BaseFormat:
     def check(self, headers, form, files, data) -> bool:

@@ -8,7 +8,7 @@ from mlchain import logger
 from mlchain.server import MLServer
 from mlchain.base import ServeModel
 from mlchain.server.authentication import Authentication
-
+import traceback
 
 def select_gpu():
     try:
@@ -330,8 +330,10 @@ def get_model(module, serve_model=False):
 
     try:
         module = importlib.import_module(import_name)
-    except: 
-        logger.error("There's no Mlchain module in {0}. So please check again the mlconfig.yaml or server file!".format(import_name))
+    except Exception as ex: 
+        logger.error(traceback.format_exc())
+
+        raise Exception("There's no Mlchain module in {0}. So please check again the mlconfig.yaml or server file!".format(import_name))
         return None 
 
     serve_models = [v for v in module.__dict__.values() if isinstance(v, ServeModel)]
