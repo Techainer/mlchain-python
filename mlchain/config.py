@@ -178,8 +178,8 @@ def init_sentry():
         key = "app", 
         value = {
             "app_start_time": datetime.datetime.now(),
-            "app_name": mlconfig.MLCHAIN_SERVER_NAME,
-            "app_version": mlconfig.MLCHAIN_SERVER_VERSION,
+            "app_name": str(mlconfig.MLCHAIN_SERVER_NAME),
+            "app_version": str(mlconfig.MLCHAIN_SERVER_VERSION),
         }
     )
     logger.info("Initialized Sentry to {0} and traces_sample_rate: {1}".format(mlconfig.MLCHAIN_SENTRY_DSN, mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE))
