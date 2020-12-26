@@ -10,6 +10,7 @@ class MlChainError(Exception):
     """Base class for all exceptions."""
 
     def __init__(self, msg, code='exception', status_code=500):
+        super().__init__(msg)
         self.msg = msg
         self.code = code
         self.status_code = status_code

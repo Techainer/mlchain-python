@@ -7,7 +7,36 @@ from mlchain.base.serializer import (JsonSerializer, MsgpackSerializer,
 from mlchain.base.log import except_handler, logger
 from mlchain.server.base import RawResponse
 from sentry_sdk import Hub
-from httpcore._exceptions import ConnectError, ConnectTimeout, ReadTimeout
+from httpx import (
+    CloseError,
+    ConnectError,
+    ConnectTimeout,
+    CookieConflict,
+    DecodingError,
+    HTTPError,
+    HTTPStatusError,
+    InvalidURL,
+    LocalProtocolError,
+    NetworkError,
+    PoolTimeout,
+    ProtocolError,
+    ProxyError,
+    ReadError,
+    ReadTimeout,
+    RemoteProtocolError,
+    RequestError,
+    RequestNotRead,
+    ResponseClosed,
+    ResponseNotRead,
+    StreamConsumed,
+    StreamError,
+    TimeoutException,
+    TooManyRedirects,
+    TransportError,
+    UnsupportedProtocol,
+    WriteError,
+    WriteTimeout,
+)
 from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError
 
 class AsyncStorage:
@@ -173,6 +202,8 @@ class MLClient:
                 raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. POST".format(self.api_address, function_name))
             except ReadTimeout: 
                 raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. POST".format(self.api_address, function_name))
+            except WriteTimeout: 
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. POST".format(self.api_address, function_name))
 
             return output
 
@@ -201,6 +232,8 @@ class MLClient:
             except TimeoutError: 
                 raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, function_name))
             except ReadTimeout: 
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, function_name))
+            except WriteTimeout: 
                 raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, function_name))
 
             return output
