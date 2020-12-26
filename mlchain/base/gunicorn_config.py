@@ -1,4 +1,4 @@
 from mlchain.config import init_sentry
 
-def on_starting(server): 
+def post_worker_init(worker): 
     init_sentry()

@@ -134,7 +134,9 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
     if wrapper == 'gunicorn' and os.name == 'nt':
         logger.warning('Gunicorn warper are not supported on Windows. Switching to None instead.')
         wrapper = None
-    workers = mlconfig.get_value(workers, config['gunicorn'], 'workers', None)
+    workers = None 
+    if 'gunicorn' in config:
+        workers = mlconfig.get_value(workers, config['gunicorn'], 'workers', None)
     if workers is None and 'hypercorn' in config.keys():
         workers = mlconfig.get_value(workers, config['hypercorn'], 'workers', None)
     workers = int(workers) if workers is not None else 1
@@ -200,8 +202,8 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 for key, value in config.items():
                     self.cfg.set(key.lower(), value)
 
-                from mlchain.base.gunicorn_config import on_starting
-                self.cfg.set("on_starting", on_starting)
+                from mlchain.base.gunicorn_config import post_worker_init
+                self.cfg.set("post_worker_init", post_worker_init)
 
             def load(self):
                 original_cuda_variable = os.environ.get('CUDA_VISIBLE_DEVICES')
@@ -315,7 +317,12 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
 def get_model(module, serve_model=False):
     import_name = prepare_import(module)
 
-    module = importlib.import_module(import_name)
+    try:
+        module = importlib.import_module(import_name)
+    except: 
+        logger.error("There's no Mlchain module in {0}. So please check again the mlconfig.yaml or server file!".format(import_name))
+        return None 
+
     serve_models = [v for v in module.__dict__.values() if isinstance(v, ServeModel)]
     if len(serve_models) > 0 and serve_model:
         serve_model = serve_models[0]
@@ -333,5 +340,5 @@ def get_model(module, serve_model=False):
         serve_model = ServeModel(serve_models[-1])
         return serve_model
 
-    logger.error("Could not find any instance to serve")
+    logger.error("Could not find any instance to serve. So please check again the mlconfig.yaml or server file!")
     return None

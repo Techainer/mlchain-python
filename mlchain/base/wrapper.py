@@ -23,8 +23,8 @@ class GunicornWrapper(BaseApplication):
         for key, value in config.items():
             self.cfg.set(key.lower(), value)
 
-        from mlchain.base.gunicorn_config import on_starting
-        self.cfg.set("on_starting", on_starting)
+        from mlchain.base.gunicorn_config import post_worker_init
+        self.cfg.set("post_worker_init", post_worker_init)
 
     def load(self):
         return self.application
