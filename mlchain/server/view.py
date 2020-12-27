@@ -124,8 +124,8 @@ class View:
                 except MlChainError as ex:
                     exception = ex
                     output = None
-                except Exception:
-                    exception = traceback.format_exc()
+                except Exception as ex:
+                    exception = ex
                     output = None
 
                 time_process = time.time() - start_time
@@ -181,8 +181,8 @@ class ViewAsync(View):
                 except MlChainError as ex:
                     exception = ex
                     output = None
-                except Exception:
-                    exception = traceback.format_exc()
+                except Exception as ex:
+                    exception = ex
                     output = None
 
                 time_process = time.time() - start_time

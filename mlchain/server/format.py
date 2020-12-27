@@ -9,7 +9,7 @@ from sentry_sdk import add_breadcrumb, capture_exception
 import re
 import os
 
-def logging_error(exception): 
+def logging_error(exception, true_exception = None): 
     string_exception = "\n".join(exception)
     sentry_ignore_logger.error(string_exception)
 
@@ -30,7 +30,10 @@ def logging_error(exception):
     except: 
         the_exception_2 = ""
 
-    capture_exception(RuntimeError("{0} {1}".format(the_exception_1, the_exception_2)))
+    if true_exception is not None:
+        capture_exception(true_exception)
+    else:
+        capture_exception(RuntimeError("{0} {1}".format(the_exception_1, the_exception_2)))
 
 class BaseFormat:
     def check(self, headers, form, files, data) -> bool:
@@ -80,7 +83,7 @@ class BaseFormat:
                     'api_version': request_context.get('api_version'),
                     'mlchain_version': __version__
                 }
-                logging_error(error)
+                logging_error(error, true_exception = exception)
                 return JsonResponse(output, 500)
 
             exception = exception.split("\n")
@@ -159,7 +162,7 @@ class MLchainFormat(BaseFormat):
                 }
                 status = 500
 
-                logging_error(error)
+                logging_error(error, true_exception = exception)
             else:
                 exception = exception.split("\n")
                 logging_error(exception)
