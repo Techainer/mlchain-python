@@ -57,7 +57,7 @@ class View:
         return context_id
 
     def init_context(self): 
-        uid = uuid4().hex
+        uid = str(uuid4())
         mlchain_context['MLCHAIN_CONTEXT_ID'] = uid
         return uid 
         
@@ -118,6 +118,7 @@ class View:
 
                     uid = self.init_context_with_headers(headers, uid)
                     scope.set_tag("transaction_id", uid)
+                    logger.debug("Mlchain transaction id: {0}".format(uid))
 
                     output = self.server.model.call_function(function_name, uid, **kwargs)
                     exception = None
@@ -175,6 +176,7 @@ class ViewAsync(View):
                     kwargs = self.server._normalize_kwargs_to_valid_format(kwargs, func)
                     uid = self.init_context_with_headers(headers, uid)
                     scope.set_tag("transaction_id", uid)
+                    logger.debug("Mlchain transaction id: {0}".format(uid))
 
                     output = await self.server.model.call_async_function(function_name, uid, **kwargs)
                     exception = None
