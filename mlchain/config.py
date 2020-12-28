@@ -156,7 +156,7 @@ def load_config(data):
                             data['mode']['env'][mode][k] = environ[k]
                     mlconfig.update(data['mode']['env'][mode])
     
-    if mlconfig.MLCHAIN_SENTRY_DSN is not None and data.get('wrapper', None) != 'gunicorn': 
+    if (mlconfig.MLCHAIN_SENTRY_DSN is not None and mlconfig.MLCHAIN_SENTRY_DSN != 'None') and data.get('wrapper', None) != 'gunicorn': 
         init_sentry()
 
 def before_send(event, hint): 
@@ -166,28 +166,33 @@ def before_send(event, hint):
     event['extra']["gpuinfo"] = get_gpu_statistics()
     return event
 
-def init_sentry(): 
+def init_sentry():
+    if mlconfig.MLCHAIN_SENTRY_DSN is None or mlconfig.MLCHAIN_SENTRY_DSN == 'None':
+        return None
     logger.debug("Initializing Sentry to {0} and traces_sample_rate: {1} and sample_rate: {2} and drop_modules: {3}".format(mlconfig.MLCHAIN_SENTRY_DSN, mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_DROP_MODULES))
-    sentry_sdk.init(
-        dsn=mlconfig.MLCHAIN_SENTRY_DSN,
-        integrations=[FlaskIntegration()],
-        sample_rate=mlconfig.MLCHAIN_SENTRY_SAMPLE_RATE,
-        traces_sample_rate=mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE,
-        server_name=mlconfig.MLCHAIN_SERVER_NAME,
-        environment=mlconfig.MLCHAIN_DEFAULT_MODE, 
-        before_send=before_send
-    )
+    try:
+        sentry_sdk.init(
+            dsn=mlconfig.MLCHAIN_SENTRY_DSN,
+            integrations=[FlaskIntegration()],
+            sample_rate=mlconfig.MLCHAIN_SENTRY_SAMPLE_RATE,
+            traces_sample_rate=mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE,
+            server_name=mlconfig.MLCHAIN_SERVER_NAME,
+            environment=mlconfig.MLCHAIN_DEFAULT_MODE, 
+            before_send=before_send
+        )
 
-    sentry_sdk.set_context(
-        key = "app", 
-        value = {
-            "app_start_time": datetime.datetime.now(),
-            "app_name": str(mlconfig.MLCHAIN_SERVER_NAME),
-            "app_version": str(mlconfig.MLCHAIN_SERVER_VERSION),
-        }
-    )
-    logger.info("Initialized Sentry to {0} and traces_sample_rate: {1} and sample_rate: {2} and drop_modules: {3}".format(mlconfig.MLCHAIN_SENTRY_DSN, mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_DROP_MODULES))
-    
+        sentry_sdk.set_context(
+            key = "app", 
+            value = {
+                "app_start_time": datetime.datetime.now(),
+                "app_name": str(mlconfig.MLCHAIN_SERVER_NAME),
+                "app_version": str(mlconfig.MLCHAIN_SERVER_VERSION),
+            }
+        )
+        logger.info("Initialized Sentry to {0} and traces_sample_rate: {1} and sample_rate: {2} and drop_modules: {3}".format(mlconfig.MLCHAIN_SENTRY_DSN, mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_DROP_MODULES))
+    except sentry_sdk.utils.BadDsn:
+        if 'http' in mlconfig.MLCHAIN_SENTRY_DSN:
+            raise SystemExit("Sentry DSN configuration is invalid") 
 
 def load_json(path):
     import json

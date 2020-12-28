@@ -18,8 +18,8 @@ sentry_logging = LoggingIntegration(
     level=logging.INFO,        # Capture info and above as breadcrumbs
     event_level=logging.ERROR  # Send errors as events
 )
-ignore_logger("sentry.ignore")
-sentry_ignore_logger = logging.getLogger("sentry.ignore")
+ignore_logger("mlchain-server")
+sentry_ignore_logger = logging.getLogger("mlchain-server")
 # End sentry integration 
 
 
