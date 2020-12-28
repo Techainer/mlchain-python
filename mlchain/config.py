@@ -104,8 +104,6 @@ class MLConfig(BaseConfig):
                         for k, v in data['mode']['env'][mode].items():
                             if k in environ:
                                 data['mode']['env'][mode][k] = environ[k]
-                            else:
-                                environ[k] = str(v)
                         self.update(data['mode']['env'][mode])
 
     def get_client_config(self, name):

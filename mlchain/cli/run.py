@@ -193,6 +193,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
     if server == 'grpc':
         from mlchain.server.grpc_server import GrpcServer
         app = get_model(entry_file, serve_model=True)
+
+        if app is None: 
+            raise Exception("Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(entry_file))
+
         app = GrpcServer(app, name=name)
         app.run(host, port)
     elif wrapper == 'gunicorn':
@@ -223,6 +227,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 else:
                     logger.info(f"Skipping automatic GPU selection for gunicorn worker since CUDA_VISIBLE_DEVICES environment variable is already set to {original_cuda_variable}")
                 serve_model = get_model(entry_file, serve_model=True)
+
+                if serve_model is None: 
+                    raise Exception("Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(entry_file))
+
                 if isinstance(serve_model, ServeModel):
                     if (not self.autofrontend) and model_id is not None:
                         from mlchain.server.autofrontend import register_autofrontend
@@ -280,6 +288,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
     elif wrapper == 'hypercorn' and server == 'quart':
         from mlchain.server.quart_server import QuartServer
         app = get_model(entry_file, serve_model=True)
+
+        if app is None: 
+            raise Exception("Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(entry_file))
+
         app = QuartServer(app, name=name, version=version, api_format=api_format,
                           authentication=authentication,
                           static_url_path=static_url_path,
@@ -289,6 +301,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 gunicorn=False, hypercorn=True, **config.get('hypercorn', {}), model_id=model_id)
 
     app = get_model(entry_file)
+
+    if app is None: 
+        raise Exception("Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(entry_file))
+
     if isinstance(app, MLServer):
         if app.__class__.__name__ == 'FlaskServer':
             app.run(host, port, cors=cors, gunicorn=False)
@@ -332,8 +348,6 @@ def get_model(module, serve_model=False):
         module = importlib.import_module(import_name)
     except Exception as ex: 
         logger.error(traceback.format_exc())
-
-        raise Exception("There's no Mlchain module in {0}. So please check again the mlconfig.yaml or server file!".format(import_name))
         return None 
 
     serve_models = [v for v in module.__dict__.values() if isinstance(v, ServeModel)]
