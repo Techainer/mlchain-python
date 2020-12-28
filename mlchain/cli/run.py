@@ -133,6 +133,8 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
             raise AssertionError("Unexpected param {0}".format(kw))
     model_id = mlconfig.get_value(None, config, 'model_id', None)
     entry_file = mlconfig.get_value(entry_file, config, 'entry_file', 'server.py')
+    if entry_file.strip() == '':
+        raise SystemExit(f"Entry file cannot be empty")
     if not os.path.exists(entry_file):
         raise SystemExit(f"Entry file {entry_file} not found in current working directory.")
     host = mlconfig.get_value(host, config, 'host', 'localhost')
@@ -229,7 +231,7 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 serve_model = get_model(entry_file, serve_model=True)
 
                 if serve_model is None: 
-                    raise Exception("Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(entry_file))
+                    raise Exception(f"Can not init model class from {entry_file}. Please check mlconfig.yaml or {entry_file} or mlchain run -m {{mode}}!")
 
                 if isinstance(serve_model, ServeModel):
                     if (not self.autofrontend) and model_id is not None:

@@ -6,7 +6,6 @@ import datetime
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 import datetime
-from sentry_sdk.integrations.wsgi import SentryWsgiMiddleware
 from mlchain.utils.system_info import get_gpu_statistics
 
 class BaseConfig(dict):

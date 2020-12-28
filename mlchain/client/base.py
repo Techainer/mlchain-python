@@ -228,20 +228,20 @@ class MLClient:
             try:
                 output = self._get(api_name, self.headers(), timeout)
             except ConnectError: 
-                raise MLChainConnectionError(msg="Client call can not connect into Server: {0}. Function: {1}. GET".format(self.api_address, function_name))
+                raise MLChainConnectionError(msg="Client call can not connect into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
             except TimeoutError: 
-                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, function_name))
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
             except ReadTimeout: 
-                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, function_name))
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
             except WriteTimeout: 
-                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, function_name))
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
 
             return output
 
         transaction = Hub.current.scope.transaction
 
         if transaction is not None:
-            with transaction.start_child(op="task", description="{0} {1}".format(self.api_address, function_name)) as span:
+            with transaction.start_child(op="task", description="{0} {1}".format(self.api_address, api_name)) as span:
                 return _call_get()
         else: 
             return _call_get()
