@@ -15,18 +15,25 @@ def _convert_kb_to_gb(size):
     """Convert given size in kB to GB with 2-decimal places rounding."""
     return round(size / 1024 ** 3, 2)
 
-def get_gpu_statistics():
-    """Get statistics for each GPU installed in the system."""
-    statistics = []
-    try:
-        nvmlInit()
+class GPUStats:
+    def __init__(self):
+        try:
+            nvmlInit()
+            self.has_gpu = True
+        except Exception as error:
+            logger.debug(f"Cannot get GPU info: {error}")
+            self.has_gpu = False
+        if self.has_gpu:
+            self.gpu_count = nvmlDeviceGetCount()
 
-        count = nvmlDeviceGetCount()
-        for i in range(count):
+    def get_gpu_statistics(self):
+        """Get statistics for each GPU installed in the system."""
+        if not self.has_gpu:
+            return []
+        statistics = []
+        for i in range(self.gpu_count):
             handle = nvmlDeviceGetHandleByIndex(i)
-
             memory = nvmlDeviceGetMemoryInfo(handle)
-
             statistics.append({
                 "gpu": i,
                 "name": nvmlDeviceGetName(handle).decode("utf-8"),
@@ -36,7 +43,9 @@ def get_gpu_statistics():
                     "utilisation": int(memory.used / memory.total * 100)
                 },
             })
-    except Exception as error:
-        logger.debug("Get GPU info from NVMLError error {0}".format(error))
+        return statistics
 
-    return statistics
+gpu_stats = GPUStats()
+
+def get_gpu_statistics():
+    return gpu_stats.get_gpu_statistics()
