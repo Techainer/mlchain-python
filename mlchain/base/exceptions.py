@@ -10,24 +10,13 @@ class MlChainError(Exception):
     """Base class for all exceptions."""
 
     def __init__(self, msg, code='exception', status_code=500):
-        super().__init__(msg)
+        super(MlChainError, self).__init__(msg)
         self.msg = msg
+        self.message = msg
         self.code = code
         self.status_code = status_code
         sentry_ignore_logger.error("[{0}]: {1}".format(code, msg))
         sentry_ignore_logger.debug(traceback.format_exc())
-
-        if msg.strip().startswith("Traceback"): 
-            msg = "Check traceback!"
-
-        # Log to sentry
-        stack = traceback.extract_stack()
-        add_breadcrumb(
-            category=code, 
-            message="{0}: {1}".format(msg, "\n".join(["{0}:{1}  {2}".format(os.path.basename(x[0]), x[1], x[2]) for x in stack if re.search(r"(site-packages\/mlchain\/)|(\/envs\/)|(\/anaconda)", x[0]) is None])),
-            level='error',
-        )
-        capture_exception(self)
 
 class MLChainAssertionError(MlChainError):
     def __init__(self, msg, code="assertion", status_code=422):

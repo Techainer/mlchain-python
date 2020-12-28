@@ -69,14 +69,16 @@ class BaseFormat:
             return JsonResponse(output, 200)
         else:
             if isinstance(exception, MlChainError):
+                error = exception.msg
                 output = {
                     'error': exception.msg,
                     'code': exception.code,
                     'api_version': request_context.get('api_version'),
                     'mlchain_version': __version__
                 }
+                logging_error([error], true_exception = exception)
                 return JsonResponse(output, exception.status_code)
-            if isinstance(exception, Exception):
+            elif isinstance(exception, Exception):
                 error = traceback.extract_tb(exception.__traceback__).format()
                 output = {
                     'error': error,
@@ -85,15 +87,15 @@ class BaseFormat:
                 }
                 logging_error(error, true_exception = exception)
                 return JsonResponse(output, 500)
-
-            exception = exception.split("\n")
-            output = {
-                'error': exception,
-                'api_version': request_context.get('api_version'),
-                'mlchain_version': __version__
-            }
-            logging_error(exception)
-            return JsonResponse(output, 500)
+            else:
+                exception = exception.split("\n")
+                output = {
+                    'error': exception,
+                    'api_version': request_context.get('api_version'),
+                    'mlchain_version': __version__
+                }
+                logging_error(exception)
+                return JsonResponse(output, 500)
 
 
 class MLchainFormat(BaseFormat):
@@ -145,14 +147,15 @@ class MLchainFormat(BaseFormat):
             status = 200
         else:
             if isinstance(exception, MlChainError):
+                error = exception.msg
                 output = {
                     'error': exception.msg,
                     'code': exception.code,
                     'api_version': request_context.get('api_version'),
                     'mlchain_version': __version__
                 }
-                status = exception.status_code
-
+                logging_error([error], true_exception = exception)
+                return JsonResponse(output, exception.status_code)
             elif isinstance(exception, Exception):
                 error = traceback.extract_tb(exception.__traceback__).format()
                 output = {
@@ -160,9 +163,9 @@ class MLchainFormat(BaseFormat):
                     'api_version': request_context.get('api_version'),
                     'mlchain_version': __version__
                 }
-                status = 500
 
                 logging_error(error, true_exception = exception)
+                return JsonResponse(output, 500)
             else:
                 exception = exception.split("\n")
                 logging_error(exception)
@@ -172,6 +175,7 @@ class MLchainFormat(BaseFormat):
                     'mlchain_version': __version__
                 }
                 status = 500
+                return JsonResponse(output, 500)
                 
 
         serializer_type = headers.get('mlchain-serializer', 'json')

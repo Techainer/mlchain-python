@@ -188,7 +188,7 @@ def init_sentry():
             "app_version": str(mlconfig.MLCHAIN_SERVER_VERSION),
         }
     )
-    logger.info("Initialized Sentry to {0} and traces_sample_rate: {1}".format(mlconfig.MLCHAIN_SENTRY_DSN, mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE))
+    logger.info("Initialized Sentry to {0} and traces_sample_rate: {1} and sample_rate: {2} and drop_modules: {3}".format(mlconfig.MLCHAIN_SENTRY_DSN, mlconfig.MLCHAIN_SENTRY_TRACES_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_SAMPLE_RATE, mlconfig.MLCHAIN_SENTRY_DROP_MODULES))
     
 
 def load_json(path):
