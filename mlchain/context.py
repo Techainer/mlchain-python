@@ -86,5 +86,7 @@ class MLChainContext:
     def __getattr__(self, item):
         return self.__getitem__(item)
 
+    def set_mlchain_context_id(self, value: str):
+        self.update({"MLCHAIN_CONTEXT_ID": value})
 
 mlchain_context = MLChainContext()
