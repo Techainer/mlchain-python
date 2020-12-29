@@ -12,9 +12,9 @@ numpy<=1.19.4
 opencv-python>=4.1.2.30
 Pillow>=8.0.1
 Quart==0.6.15; python_version < '3.7'
-Quart>=0.14.1; python_version > '3.6'
+Quart==0.10.0; python_version > '3.6'
 Quart-CORS==0.2.0; python_version < '3.7'
-Quart-CORS>=0.3.0; python_version > '3.6'
+Quart-CORS==0.3.0; python_version > '3.6'
 requests>=2.25.1
 six>=1.13.0
 toml>=0.10.0
@@ -25,7 +25,7 @@ uvloop>=0.14.0; sys_platform != 'win32'
 Werkzeug>=1.0.1
 httpx==0.16.1
 hypercorn==0.5.4; python_version < '3.7'
-hypercorn>=0.11.1; python_version > '3.6'
+hypercorn==0.11.1; python_version > '3.6'
 grpcio
 protobuf>=3.10.0
 boto3>=1.16.43
