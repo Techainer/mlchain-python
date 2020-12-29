@@ -6,7 +6,38 @@ from mlchain.base.serializer import (JsonSerializer, MsgpackSerializer,
                                      MsgpackBloscSerializer, JpgMsgpackSerializer, PngMsgpackSerializer, Serializer)
 from mlchain.base.log import except_handler, logger
 from mlchain.server.base import RawResponse
-
+from sentry_sdk import Hub
+from httpx import (
+    CloseError,
+    ConnectError,
+    ConnectTimeout,
+    CookieConflict,
+    DecodingError,
+    HTTPError,
+    HTTPStatusError,
+    InvalidURL,
+    LocalProtocolError,
+    NetworkError,
+    PoolTimeout,
+    ProtocolError,
+    ProxyError,
+    ReadError,
+    ReadTimeout,
+    RemoteProtocolError,
+    RequestError,
+    RequestNotRead,
+    ResponseClosed,
+    ResponseNotRead,
+    StreamConsumed,
+    StreamError,
+    TimeoutException,
+    TooManyRedirects,
+    TransportError,
+    UnsupportedProtocol,
+    WriteError,
+    WriteTimeout,
+)
+from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError
 
 class AsyncStorage:
     def __init__(self, function):
@@ -157,21 +188,63 @@ class MLClient:
         raise NotImplementedError
 
     def post(self, function_name, headers=None, args=None, kwargs=None):
-        context = mlchain_context.copy()
-        headers = self.headers()
-        context.update(headers)
-        if 'parent_id' in context:
-            context.pop('parent_id')
-        if 'context_id' in context:
-            context['parent_id'] = context.pop('context_id')
-        return self._post(function_name, context, args, kwargs)
+        def _call_post(): 
+            context = {key: value
+                    for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
+            context.update(self.headers())
+
+            output = None
+            try:
+                output = self._post(function_name, context, args, kwargs)
+            except ConnectError: 
+                raise MLChainConnectionError(msg="Client call can not connect into Server: {0}. Function: {1}. POST".format(self.api_address, function_name))
+            except TimeoutError: 
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. POST".format(self.api_address, function_name))
+            except ReadTimeout: 
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. POST".format(self.api_address, function_name))
+            except WriteTimeout: 
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. POST".format(self.api_address, function_name))
+
+            return output
+
+        transaction = Hub.current.scope.transaction
+
+        if transaction is not None:
+            with transaction.start_child(op="task", description="{0} {1}".format(self.api_address, function_name)) as span:
+                return _call_post()
+        else: 
+            return _call_post()
 
     def _get(self, api_name, headers=None, timeout=None):
         raise NotImplementedError
 
     def get(self, api_name, headers=None, timeout=None):
-        return self._get(api_name, self.headers(), timeout)
+        def _call_get(): 
+            context = {key: value
+                        for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
+            context.update(self.headers())
 
+            output = None
+            try:
+                output = self._get(api_name, self.headers(), timeout)
+            except ConnectError: 
+                raise MLChainConnectionError(msg="Client call can not connect into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
+            except TimeoutError: 
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
+            except ReadTimeout: 
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
+            except WriteTimeout: 
+                raise MLChainTimeoutError(msg="Client call timeout into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
+
+            return output
+
+        transaction = Hub.current.scope.transaction
+
+        if transaction is not None:
+            with transaction.start_child(op="task", description="{0} {1}".format(self.api_address, api_name)) as span:
+                return _call_get()
+        else: 
+            return _call_get()
 
 class BaseFunction:
     def __init__(self, client, function_name, serializer: Serializer):
@@ -191,11 +264,8 @@ class BaseFunction:
         if 'error' in output:
             with except_handler():
                 raise Exception(
-                    "MLCHAIN VERSION: {} API VERSION: {} ERROR_CODE: {} INFO_ERROR: {}, ".format(
+                    "MLCHAIN VERSION: {} \n API VERSION: {} \n ERROR_CODE: {} \n INFO_ERROR: {}, ".format(
                         output.get('mlchain_version', None), output.get('api_version', None),
                         output.get('code', None), output['error']))
 
-        logger.debug("MLCHAIN VERSION: {} API VERSION: {}".format(
-            output.get('mlchain_version', None),
-            output.get('api_version', None)))
         return output['output']

@@ -4,16 +4,27 @@ https://github.com/Floydhub/floyd-cli
 """
 from contextlib import contextmanager
 import re
+import traceback
 from traceback import StackSummary, extract_tb
 import os
 import sys
 import logging
-import traceback
+
+# Sentry integration
+from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.logging import ignore_logger
+
+sentry_logging = LoggingIntegration(
+    level=logging.INFO,        # Capture info and above as breadcrumbs
+    event_level=logging.ERROR  # Send errors as events
+)
+ignore_logger("mlchain-server")
+sentry_ignore_logger = logging.getLogger("mlchain-server")
+# End sentry integration 
 
 
 def get_color(n):
     return '\x1b[3{0}m'.format(n)
-
 
 class MultiLine(logging.Formatter):
     def __init__(self, fmt=None, datefmt=None, style='%', newline=None):
@@ -60,7 +71,7 @@ def except_handler():
     sys.excepthook = sys.__excepthook__
 
 
-def format_exc(name='mlchain', tb=None, exception=None):
+def format_exc(name='mlchain', tb=None, exception=None, return_str=True):
     if exception is None:
         formatted_lines = traceback.format_exc().splitlines()
     else:
@@ -78,4 +89,7 @@ def format_exc(name='mlchain', tb=None, exception=None):
     output = []
     for x in formatted_lines:
         output.append(x)
-    return "\n".join(output) + "\n"
+
+    if return_str:
+        return "\n".join(output)
+    return output

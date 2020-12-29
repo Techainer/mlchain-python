@@ -6,7 +6,6 @@ from mlchain.base.log import format_exc, except_handler, logger
 
 
 class TrioProgress(trio.abc.Instrument):
-
     def __init__(self, total, notebook_mode=False, **kwargs):
         if notebook_mode:  # pragma: no cover
             from tqdm.notebook import tqdm
@@ -29,8 +28,15 @@ class Parallel:
     :verbose: Print error or not 
     """
 
-    def __init__(self, tasks: [], max_threads: int = 10, max_retries: int = 0,
-                 pass_fail_job: bool = False, verbose: bool = True, threading: bool = True):
+    def __init__(
+        self,
+        tasks: [],
+        max_threads: int = 10,
+        max_retries: int = 0,
+        pass_fail_job: bool = False,
+        verbose: bool = True,
+        threading: bool = True,
+    ):
         """
         :tasks: [Task, function] items
         :max_threads: Maximum threads to Parallel, max_threads=0 means no limitation 
@@ -40,8 +46,8 @@ class Parallel:
         """
 
         assert isinstance(tasks, list) and all(
-            callable(task) for task in tasks), \
-            'You have to transfer a list of callable instances or mlchain.Task'
+            callable(task) for task in tasks
+        ), "You have to transfer a list of callable instances or mlchain.Task"
         self.tasks = tasks
         if max_threads == -1:
             max_threads = 100
@@ -64,7 +70,9 @@ class Parallel:
         if self.show_progress_bar:
             self.progress_bar.task_processed()
 
-    async def __call_sync(self, task, outputs, idx, limiter, max_retries=1, pass_fail_job=False):
+    async def __call_sync(
+        self, task, outputs, idx, limiter, max_retries=1, pass_fail_job=False
+    ):
         if limiter is not None:
             async with limiter:
                 for retry_idx in range(max_retries):
@@ -76,14 +84,17 @@ class Parallel:
                         if retry_idx == max_retries - 1 and not pass_fail_job:
                             with except_handler():
                                 raise AssertionError(
-                                    "ERROR in {}th task.\n".format(idx)
-                                    + format_exc(name='mlchain.workflows.parallel'))
+                                    "ERROR in {}th task.\n {1}".format(idx, format_exc(name="mlchain.workflows.parallel"))
+                                )
                         if retry_idx < max_retries - 1 or not self.verbose:
-                            logger.error("PARALLEL ERROR in {0}th task and retry task,"
-                                         " run times = {1}".format(idx, retry_idx + 1))
+                            logger.error(
+                                "PARALLEL ERROR in {0}th task and retry task,"
+                                " run times = {1}".format(idx, retry_idx + 1)
+                            )
                         else:
-                            logger.debug("PASSED PARALLEL ERROR in {}th task:".format(idx)
-                                         + format_exc(name='mlchain.workflows.parallel'))
+                            logger.debug(
+                                "PASSED PARALLEL ERROR in {}th task:".format(idx, format_exc(name="mlchain.workflows.parallel"))
+                            )
         else:
             for retry_idx in range(max_retries):
                 try:
@@ -93,18 +104,23 @@ class Parallel:
                 except Exception:
                     if retry_idx == max_retries - 1 and not pass_fail_job:
                         with except_handler():
-                            raise AssertionError("ERROR in {}th task\n".format(idx)
-                                                 + format_exc(name='mlchain.workflows.parallel'))
+                            raise AssertionError(
+                                "ERROR in {}th task\n".format(idx, format_exc(name="mlchain.workflows.parallel"))
+                            )
                     if retry_idx < max_retries - 1 or not self.verbose:
-                        logger.error("PARALLEL ERROR in {0}th task and retry task,"
-                                     " run times = {1}".format(idx, retry_idx + 1))
+                        logger.error(
+                            "PARALLEL ERROR in {0}th task and retry task,"
+                            " run times = {1}".format(idx, retry_idx + 1)
+                        )
                     else:
-                        logger.debug("PASSED PARALLEL ERROR: "
-                                     + format_exc(name='mlchain.workflows.parallel'))
+                        logger.debug(
+                            "PASSED PARALLEL ERROR: {0}".format(format_exc(name="mlchain.workflows.parallel"))
+                        )
         self.update_progress_bar()
 
-    async def __call_async(self, task, outputs, idx, limiter,
-                           max_retries=1, pass_fail_job=False):
+    async def __call_async(
+        self, task, outputs, idx, limiter, max_retries=1, pass_fail_job=False
+    ):
         if limiter is not None:
             async with limiter:
                 for retry_idx in range(max_retries):
@@ -115,14 +131,24 @@ class Parallel:
                     except Exception:
                         if retry_idx == max_retries - 1 and not pass_fail_job:
                             with except_handler():
-                                raise AssertionError("ERROR in {}th task\n".format(idx)
-                                                     + format_exc(name='mlchain.workflows.parallel'))
+                                raise AssertionError(
+                                    "ERROR in {0}th task\n {1}".format(
+                                        idx,
+                                        format_exc(name="mlchain.workflows.parallel"),
+                                    )
+                                )
+
                         if retry_idx < max_retries - 1 or not self.verbose:
-                            logger.error("PARALLEL ERROR in {0}th task and retry task, "
-                                         "run times = {1}".format(idx, retry_idx + 1))
+                            logger.error(
+                                "PARALLEL ERROR in {0}th task and retry task, "
+                                "run times = {1}".format(idx, retry_idx + 1)
+                            )
                         else:
-                            logger.debug("PASSED PARALLEL ERROR in {}th task:".format(idx)
-                                         + format_exc(name='mlchain.workflows.parallel'))
+                            logger.debug(
+                                "PASSED PARALLEL ERROR in {0}th task: {1}".format(
+                                    idx, format_exc(name="mlchain.workflows.parallel")
+                                )
+                            )
         else:
             for retry_idx in range(max_retries):
                 try:
@@ -132,14 +158,24 @@ class Parallel:
                 except Exception as ex:
                     if retry_idx == max_retries - 1 and not pass_fail_job:
                         with except_handler():
-                            raise AssertionError("ERROR in {}th task\n".format(idx)
-                                                 + format_exc(name='mlchain.workflows.parallel'))
+                            raise AssertionError(
+                                "ERROR in {0}th task\n {1}".format(
+                                    idx, format_exc(name="mlchain.workflows.parallel")
+                                )
+                            )
+
                     if retry_idx < max_retries - 1 or not self.verbose:
-                        logger.error("PARALLEL ERROR in {0}th task and retry task, "
-                                     "run times = {1}".format(idx, retry_idx + 1))
+                        logger.error(
+                            "PARALLEL ERROR in {0}th task and retry task, "
+                            "run times = {1}".format(idx, retry_idx + 1)
+                        )
                     else:
-                        logger.debug("PASSED PARALLEL ERROR in {}th task:".format(idx)
-                                     + format_exc(name='mlchain.workflows.parallel'))
+                        logger.debug(
+                            "PASSED PARALLEL ERROR in {}th task: {1}".format(
+                                idx, format_exc(name="mlchain.workflows.parallel")
+                            )
+                        )
+
             self.update_progress_bar()
 
     async def dispatch(self):
@@ -153,17 +189,40 @@ class Parallel:
 
         async with trio.open_nursery() as nursery:
             for idx, task in enumerate(self.tasks):
-                if hasattr(task, 'to_async') and callable(task.to_async):
-                    nursery.start_soon(self.__call_async, task.to_async(), outputs, idx,
-                                       self.limiter, self.max_retries, self.pass_fail_job)
-                elif inspect.iscoroutinefunction(task) \
-                        or (not inspect.isfunction(task) and hasattr(task, '__call__')
-                            and inspect.iscoroutinefunction(task.__call__)):
-                    nursery.start_soon(self.__call_async, task, outputs, idx,
-                                       self.limiter, self.max_retries, self.pass_fail_job)
+                if hasattr(task, "to_async") and callable(task.to_async):
+                    nursery.start_soon(
+                        self.__call_async,
+                        task.to_async(),
+                        outputs,
+                        idx,
+                        self.limiter,
+                        self.max_retries,
+                        self.pass_fail_job,
+                    )
+                elif inspect.iscoroutinefunction(task) or (
+                    not inspect.isfunction(task)
+                    and hasattr(task, "__call__")
+                    and inspect.iscoroutinefunction(task.__call__)
+                ):
+                    nursery.start_soon(
+                        self.__call_async,
+                        task,
+                        outputs,
+                        idx,
+                        self.limiter,
+                        self.max_retries,
+                        self.pass_fail_job,
+                    )
                 else:
-                    nursery.start_soon(self.__call_sync, task, outputs, idx,
-                                       self.limiter, self.max_retries, self.pass_fail_job)
+                    nursery.start_soon(
+                        self.__call_sync,
+                        task,
+                        outputs,
+                        idx,
+                        self.limiter,
+                        self.max_retries,
+                        self.pass_fail_job,
+                    )
 
         return outputs
 
@@ -177,11 +236,14 @@ class Parallel:
                 if retry_idx == self.max_retries - 1 and not self.pass_fail_job:
                     return ex
                 if retry_idx < self.max_retries - 1 or not self.verbose:
-                    logger.error("PARALLEL ERROR in {0}th task and retry task, "
-                                 "run times = {1}".format(idx, retry_idx + 1))
+                    logger.error(
+                        "PARALLEL ERROR in {0}th task and retry task, "
+                        "run times = {1}".format(idx, retry_idx + 1)
+                    )
                 else:
-                    logger.debug("PASSED PARALLEL ERROR in {}th task:".format(idx)
-                                 + format_exc(name='mlchain.workflows.parallel'))
+                    logger.debug(
+                        "PASSED PARALLEL ERROR in {}th task:".format(idx, format_exc(name="mlchain.workflows.parallel"))
+                    )
         return None
 
     def run(self, progress_bar: bool = False, notebook_mode: bool = False):
@@ -194,10 +256,14 @@ class Parallel:
             pool = ThreadPool(max(1, self.max_threads))
             if progress_bar:
                 self.show_progress_bar = True
-                self.progress_bar = TrioProgress(total=len(self.tasks),
-                                                 notebook_mode=notebook_mode)
+                self.progress_bar = TrioProgress(
+                    total=len(self.tasks), notebook_mode=notebook_mode
+                )
 
-            async_result = [pool.apply_async(self.exec_task, args=[task, idx]) for idx, task in enumerate(self.tasks)]
+            async_result = [
+                pool.apply_async(self.exec_task, args=[task, idx])
+                for idx, task in enumerate(self.tasks)
+            ]
 
             results = []
             for result in async_result:
@@ -211,6 +277,7 @@ class Parallel:
             return results
         if progress_bar:
             self.show_progress_bar = True
-            self.progress_bar = TrioProgress(total=len(self.tasks),
-                                             notebook_mode=notebook_mode)
+            self.progress_bar = TrioProgress(
+                total=len(self.tasks), notebook_mode=notebook_mode
+            )
         return trio.run(self.dispatch)

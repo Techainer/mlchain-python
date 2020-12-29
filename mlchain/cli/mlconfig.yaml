@@ -1,0 +1,54 @@
+# Service Config 
+name: mlchain-server     # Name of service
+version: '0.0.1'         # Version of service 
+entry_file: mlchain_server.py    # Python file contains object ServeModel
+
+# Host and Port Config
+host: 0.0.0.0            # Host of service
+port: 8001               # Port service
+
+# Server config 
+server: flask            # Option flask or quart or grpc
+wrapper: None            # Option None or gunicorn or hypercorn
+cors: true               # Auto enable CORS
+static_folder:           # static folder for TemplateResponse
+static_url_path:         # static url path for TemplateResponse
+template_folder:         # template folder for TemplateResponse
+
+# Gunicorn config - Use gunicorn for general case
+gunicorn: 
+  timeout: 200            # The requests will be maximum 200 seconds in default, then when the requests is done, the worker will be restarted 
+  keepalive: 3            # Keep requests alive when inactive with client in 3 seconds default
+  max_requests: 0         # Maximum serving requests until workers restart to handle over memory in Python 
+  workers: 1              # Number of duplicate workers
+  threads: 1              # Number of simultaneous threads in workers
+  worker_class: 'gthread' # Worker class gthread is fit with all case. Can use 'uvicorn.workers.UvicornWorker' which be higher performance sometimes 
+
+# Hypercorn config - Use hypercorn for async server with Quart 
+hypercorn: 
+  timeout: 200            # The requests will be maximum 200 seconds in default, then when the requests is done, the worker will be restarted 
+  keepalive: 3            # Keep requests alive when inactive with client in 3 seconds default
+  threads: 50             # Number of simultaneous threads in workers. Default: 50. Remember that some models can not call simultaneous, so you can use @non_thread() decorator to the function.
+  worker_class: 'uvloop'  # Worker class uvloop is fit with all case. 
+
+bind:
+  - 'unix:/tmp/gunicorn.sock' # Using sock to make gunicorn faster 
+
+# Sentry logging, Sentry will be run when the worker is already initialized
+sentry: 
+  dsn: None                 # URI Sentry of the project or export SENTRY_DSN
+  traces_sample_rate: 0.1   # Default log 0.1 
+  sample_rate: 1.0          # Default 1.0
+  drop_modules: True        # Drop python requirements to lower the size of log 
+
+# Mlconfig - Use these mode and config or env to adaptive your code 
+# You can import mlconfig and use as variable. Ex: mlconfig.debug 
+mode: 
+  default: default          # The default mode
+  env:
+    default:                # All variable in default mode will be existed in other mode 
+      test: "Hello"
+    dev:                    # Development mode 
+      debug: True
+    prod:                   # Production mode 
+      debug: False

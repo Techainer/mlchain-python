@@ -1,34 +1,38 @@
-attrs>=19.3.0
-blosc>=1.8.3; sys_platform != 'win32'
+attrs>=20.3.0
+blosc>=1.10.1; sys_platform != 'win32'
 Click>=7.1.2
 Flask>=1.1.2
-Flask-Cors>=3.0.8
+Flask-Cors>=3.0.9
 gunicorn>=20.0.4
-h2==3.2.0
-Jinja2>=2.10.3
+h2==4.0.0
+Jinja2>=2.11.2
 MarkupSafe>=1.1.1
-msgpack==1.0.0
-numpy<=1.18.1
+msgpack==1.0.2
+numpy<=1.19.4
 opencv-python>=4.1.2.30
-Pillow==6.0.0
-Quart<=0.10.0
-Quart-CORS<=0.2.0
-requests>=2.22.0
+Pillow>=8.0.1
+Quart<=0.6.15; python_version < '3.7'
+Quart<=0.14.1; python_version > '3.6'
+Quart-CORS<=0.3.0
+requests>=2.25.1
 six>=1.13.0
 toml>=0.10.0
-trio>=0.13.0
-urllib3>=1.25.7
-uvicorn<=0.11.5
+trio>=0.17.0
+urllib3>=1.26.2
+uvicorn<=0.13.2
 uvloop>=0.14.0; sys_platform != 'win32'
-Werkzeug>=0.15.0
-httpx==0.13.3
-hypercorn>=0.5.4
-grpcio==1.27.2
+Werkzeug>=1.0.1
+httpx==0.16.1
+hypercorn<=0.5.4; python_version < '3.7'
+hypercorn>=0.11.1; python_version > '3.6'
+grpcio
 protobuf>=3.10.0
-boto3>=1.9.66
-pyyaml>=5.1
+boto3>=1.16.43
+pyyaml>=5.3.1
+sentry-sdk[flask]>=0.19.5
 fuzzywuzzy
 GPUtil
 tqdm
 pyngrok
 python-Levenshtein
+pynvml

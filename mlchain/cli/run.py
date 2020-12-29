@@ -2,12 +2,13 @@ import os
 import click
 import importlib
 import sys
+import copy
 import GPUtil
 from mlchain import logger
 from mlchain.server import MLServer
 from mlchain.base import ServeModel
 from mlchain.server.authentication import Authentication
-
+import traceback
 
 def select_gpu():
     try:
@@ -92,25 +93,33 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 name, mode, api_format, ngrok, kws):
     kws = list(kws)
     if isinstance(entry_file, str) and not os.path.exists(entry_file):
-        kws = [entry_file] + kws
+        kws = [f'--entry_file={entry_file}'] + kws
         entry_file = None
     from mlchain import config as mlconfig
     default_config = False
+
     if config is None:
         default_config = True
         config = 'mlconfig.yaml'
 
-    if os.path.isfile(config):
-        config = mlconfig.load_file(config)
+    config_path = copy.deepcopy(config)
+    if os.path.isfile(config_path) and os.path.exists(config_path):
+        config = mlconfig.load_file(config_path)
         if config is None:
-            raise AssertionError("Not support file config {0}".format(config))
+            raise SystemExit("Config file {0} are not supported".format(config_path))
     else:
         if not default_config:
-            raise FileNotFoundError("Not found file {0}".format(config))
-        config = {}
+            raise SystemExit("Can't find config file {0}".format(config_path))
+        else:
+            raise SystemExit("Can't find mlchain config file. Please double check your current working directory. Or use `mlchain init` to initialize a new ones here.")
     if 'mode' in config and 'env' in config['mode']:
         if mode in config['mode']['env']:
             config['mode']['default'] = mode
+        elif mode is not None:
+            available_mode = list(config['mode']['env'].keys())
+            available_mode = [each for each in available_mode if each != 'default']
+            raise SystemExit(
+                f"No {mode} mode are available. Found these mode in config file: {available_mode}")
     mlconfig.load_config(config)
     for kw in kws:
         if kw.startswith('--'):
@@ -124,6 +133,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
             raise AssertionError("Unexpected param {0}".format(kw))
     model_id = mlconfig.get_value(None, config, 'model_id', None)
     entry_file = mlconfig.get_value(entry_file, config, 'entry_file', 'server.py')
+    if entry_file.strip() == '':
+        raise SystemExit(f"Entry file cannot be empty")
+    if not os.path.exists(entry_file):
+        raise SystemExit(f"Entry file {entry_file} not found in current working directory.")
     host = mlconfig.get_value(host, config, 'host', 'localhost')
     port = mlconfig.get_value(port, config, 'port', 5000)
     server = mlconfig.get_value(server, config, 'server', 'flask')
@@ -134,7 +147,9 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
     if wrapper == 'gunicorn' and os.name == 'nt':
         logger.warning('Gunicorn warper are not supported on Windows. Switching to None instead.')
         wrapper = None
-    workers = mlconfig.get_value(workers, config['gunicorn'], 'workers', None)
+    workers = None 
+    if 'gunicorn' in config:
+        workers = mlconfig.get_value(workers, config['gunicorn'], 'workers', None)
     if workers is None and 'hypercorn' in config.keys():
         workers = mlconfig.get_value(workers, config['hypercorn'], 'workers', None)
     workers = int(workers) if workers is not None else 1
@@ -180,6 +195,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
     if server == 'grpc':
         from mlchain.server.grpc_server import GrpcServer
         app = get_model(entry_file, serve_model=True)
+
+        if app is None: 
+            raise Exception("Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(entry_file))
+
         app = GrpcServer(app, name=name)
         app.run(host, port)
     elif wrapper == 'gunicorn':
@@ -200,6 +219,9 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 for key, value in config.items():
                     self.cfg.set(key.lower(), value)
 
+                from mlchain.base.gunicorn_config import post_worker_init
+                self.cfg.set("post_worker_init", post_worker_init)
+
             def load(self):
                 original_cuda_variable = os.environ.get('CUDA_VISIBLE_DEVICES')
                 if original_cuda_variable is None:
@@ -207,6 +229,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 else:
                     logger.info(f"Skipping automatic GPU selection for gunicorn worker since CUDA_VISIBLE_DEVICES environment variable is already set to {original_cuda_variable}")
                 serve_model = get_model(entry_file, serve_model=True)
+
+                if serve_model is None: 
+                    raise Exception(f"Can not init model class from {entry_file}. Please check mlconfig.yaml or {entry_file} or mlchain run -m {{mode}}!")
+
                 if isinstance(serve_model, ServeModel):
                     if (not self.autofrontend) and model_id is not None:
                         from mlchain.server.autofrontend import register_autofrontend
@@ -259,10 +285,15 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
             if 'uvicorn' in gunicorn_config['worker_class']:
                 logger.warning("Can't use flask with uvicorn. change to gthread")
                 gunicorn_config['worker_class'] = 'gthread'
+        
         GunicornWrapper(server, bind=bind, **gunicorn_config).run()
     elif wrapper == 'hypercorn' and server == 'quart':
         from mlchain.server.quart_server import QuartServer
         app = get_model(entry_file, serve_model=True)
+
+        if app is None: 
+            raise Exception("Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(entry_file))
+
         app = QuartServer(app, name=name, version=version, api_format=api_format,
                           authentication=authentication,
                           static_url_path=static_url_path,
@@ -272,6 +303,10 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
                 gunicorn=False, hypercorn=True, **config.get('hypercorn', {}), model_id=model_id)
 
     app = get_model(entry_file)
+
+    if app is None: 
+        raise Exception("Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(entry_file))
+
     if isinstance(app, MLServer):
         if app.__class__.__name__ == 'FlaskServer':
             app.run(host, port, cors=cors, gunicorn=False)
@@ -311,7 +346,12 @@ def run_command(entry_file, host, port, bind, wrapper, server, workers, config,
 def get_model(module, serve_model=False):
     import_name = prepare_import(module)
 
-    module = importlib.import_module(import_name)
+    try:
+        module = importlib.import_module(import_name)
+    except Exception as ex: 
+        logger.error(traceback.format_exc())
+        return None 
+
     serve_models = [v for v in module.__dict__.values() if isinstance(v, ServeModel)]
     if len(serve_models) > 0 and serve_model:
         serve_model = serve_models[0]
@@ -329,5 +369,5 @@ def get_model(module, serve_model=False):
         serve_model = ServeModel(serve_models[-1])
         return serve_model
 
-    logger.error("Could not find any instance to serve")
+    logger.error("Could not find any instance to serve. So please check again the mlconfig.yaml or server file!")
     return None

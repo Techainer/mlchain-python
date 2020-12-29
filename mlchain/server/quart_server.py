@@ -162,7 +162,7 @@ class QuartEndpointAction:
             return await response_function(output, 200)
         except MlChainError as ex:
             err = ex.msg
-            logger.error("code: {0} msg: {1}".format(ex.code, ex.msg))
+            # logger.error("code: {0} msg: {1}".format(ex.code, ex.msg))
 
             output = {
                 'error': err,
@@ -174,7 +174,6 @@ class QuartEndpointAction:
             return await response_function(output, ex.status_code)
         except AssertionError as ex:
             err = str(ex)
-            logger.error(err)
 
             output = {
                 'error': err,
@@ -184,8 +183,7 @@ class QuartEndpointAction:
             }
             return await response_function(output, 422)
         except Exception as ex:
-            err = str(format_exc(name='mlchain.serve.server'))
-            logger.error(err)
+            err = format_exc(name='mlchain.serve.server')
 
             output = {
                 'error': err,

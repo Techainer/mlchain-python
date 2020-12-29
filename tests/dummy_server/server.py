@@ -10,7 +10,7 @@ class Model():
         pass
 
 
-    def predict(self, image: np.ndarray):
+    def predict(self, image: np.ndarray = None):
         """
         Resize input to 100 by 100.
         Args:
@@ -18,6 +18,8 @@ class Model():
         Returns:
             The image (np.ndarray) at 100 by 100.
         """
+        if image is None:
+            return 'Hihi'
         image = cv2.resize(image, (100, 100))
         return image
 

@@ -144,7 +144,6 @@ class FlaskEndpointAction:
             return response_function(output, 200)
         except MlChainError as ex:
             err = ex.msg
-            logger.error("code: {0} msg: {1}".format(ex.code, ex.msg))
 
             output = {
                 'error': err,
@@ -156,7 +155,6 @@ class FlaskEndpointAction:
             return response_function(output, ex.status_code)
         except AssertionError as ex:
             err = str(ex)
-            logger.error(err)
 
             output = {
                 'error': err,
@@ -166,8 +164,7 @@ class FlaskEndpointAction:
             }
             return response_function(output, 422)
         except Exception:
-            err = str(format_exc(name='mlchain.serve.server'))
-            logger.error(err)
+            err = format_exc(name='mlchain.serve.server', return_str=False)
 
             output = {
                 'error': err,
@@ -255,7 +252,7 @@ class FlaskServer(MLServer):
         self.app.add_url_rule('/call_raw/<function_name>', 'call_raw',
                               FlaskView(self, RawFormat(), self.authentication),
                               methods=['POST', 'GET'], strict_slashes=False)
-
+        
     def _get_file_name(self, storage):
         return storage.filename
 
@@ -375,6 +372,7 @@ class FlaskServer(MLServer):
 
         if cors:
             CORS(self.app, resources=cors_resources, origins=cors_allow_origins)
+        
         if not gunicorn:
             if bind is not None:
                 if isinstance(bind, str):
@@ -410,6 +408,7 @@ class FlaskServer(MLServer):
             logger.info("-" * 80)
 
             loglevel = kwargs.get('loglevel', 'warning' if debug else 'info')
+            
             GunicornWrapper(self.app, bind=bind, workers=workers, timeout=timeout,
                             keepalive=keepalive, max_requests=max_requests,
                             loglevel=loglevel, worker_class=worker_class,

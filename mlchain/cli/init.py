@@ -1,18 +1,20 @@
-import os
 import click
-from mlchain import logger
+import os
 
 root_path = os.path.dirname(__file__)
 
-
 @click.command("init", short_help="Init base config to run server.")
-@click.argument('file', nargs=1, required=False, default='mlconfig.yaml')
-def init_command(file):
-    if file is None:
-        file = 'mlconfig.yaml'  # pragma: no cover
-    if os.path.exists(file):
-        logger.warning("File {} exists. Please change name file".format(file))
-    else:
-        with open(file, 'wb') as fp:
-            with open(os.path.join(root_path, 'config.yaml'), 'rb') as fr:
-                fp.write(fr.read())
+def init_command():
+    def create_file(file): 
+        with open(file, 'wb') as f:
+            f.write(open(os.path.join(root_path, file), 'rb').read())
+
+    ALL_INIT_FILES = ['mlconfig.yaml', 'mlchain_server.py']
+    for file in ALL_INIT_FILES:
+        if os.path.exists(file): 
+            if click.confirm('File {0} is exist, Do you want to force update?'.format(file)):
+                create_file(file)
+        else: 
+            create_file(file)
+
+    click.secho('Mlchain initalization is done!', blink=True, bold=True)

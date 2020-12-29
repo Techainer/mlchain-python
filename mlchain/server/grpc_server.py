@@ -34,9 +34,9 @@ class GrpcServer(mlchain_pb2_grpc.MLChainServiceServicer, MLServer):
         kwargs = request.kwargs
         serializer = self.get_serializer(header.serializer)
         headers = request.headers
-        uid = uuid4().hex
+        uid = str(uuid4())
         mlchain_context.set(headers)
-        mlchain_context['context_id'] = uid
+        mlchain_context['MLCHAIN_CONTEXT_ID'] = uid
         args = serializer.decode(args)
         kwargs = serializer.decode(kwargs)
         func = self.model.get_function(function_name)
