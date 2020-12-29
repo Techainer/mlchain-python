@@ -4,7 +4,7 @@ version: '0.0.1'         # Version of service
 entry_file: mlchain_server.py    # Python file contains object ServeModel
 
 # Host and Port Config
-host: localhost          # Host of service
+host: 0.0.0.0            # Host of service
 port: 8001               # Port service
 
 # Server config 
