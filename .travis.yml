@@ -20,7 +20,6 @@ stages:
   - test
   - deploy
 
-
 jobs:
   include:
     - stage: sanity_check
@@ -39,52 +38,16 @@ jobs:
       script:
         - python3 setup.py bdist_wheel
         - python3 setup.py install
-      after_success:
-        - echo "Install successful"
-
-    # - stage: build
-    #   name: "Build on Windows"
-    #   os: windows
-    #   language: shell
-    #   before_install:
-    #     - choco install python --version 3.7.4
-    #     - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
-    #   install:
-    #     - python -m pip install -U scikit-build awscli pip --user
-    #     - python -m pip install -U -r requirements.txt --user
-
-    #   script:
-    #     - python setup.py bdist_wheel
-    #     - python setup.py install
-
-
-    - stage: test
-      install:
-        - pip3 install -U scikit-build pytest coverage codecov pip
-        - pip3 install -U attrs
-      script:
-        - pip3 install .
-        - python3 -m coverage run --source=. -m unittest discover
-        - python3 -m coverage combine
-        - python3 -m coverage report
-      after_success:
-        - codecov
 
     # - stage: test
-    #   name: "Test on Windows"
-    #   os: windows
-    #   language: shell
-    #   before_install:
-    #     - choco install python --version 3.7.4
-    #     - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
     #   install:
-    #     - python -m pip install -U scikit-build pytest coverage codecov pip
-    #     - python -m pip install -U attrs
+    #     - pip3 install -U scikit-build pytest coverage codecov pip
+    #     - pip3 install -U attrs
     #   script:
-    #     - python -m pip install .
-    #     - python -m coverage run --source=. -m unittest discover
-    #     - python -m coverage combine
-    #     - python -m coverage report
+    #     - pip3 install .
+    #     - python3 -m coverage run --source=. -m unittest discover
+    #     - python3 -m coverage combine
+    #     - python3 -m coverage report
     #   after_success:
     #     - codecov
 
