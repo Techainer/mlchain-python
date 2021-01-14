@@ -79,7 +79,7 @@ class BaseFormat:
                 logging_error([error], true_exception = exception)
                 return JsonResponse(output, exception.status_code)
             elif isinstance(exception, Exception):
-                error = traceback.extract_tb(exception.__traceback__).format()
+                error = traceback.format_exception(etype=type(exception), value=exception, tb=exception.__traceback__)
                 output = {
                     'error': error,
                     'api_version': request_context.get('api_version'),
