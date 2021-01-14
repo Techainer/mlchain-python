@@ -331,7 +331,7 @@ class StarletteServer(AsyncMLServer):
         for name, func in self.model.get_all_func().items():
             swagger_template.add_endpoint(func, f'/call/{name}', tags=[self.name])
 
-        SWAGGER_URL = '/swagger'
+        SWAGGER_URL = 'swagger'
 
         async def swagger_home(request: Request):
             return self.mlchain_template.TemplateResponse('swaggerio/index.html', {'request': request})
