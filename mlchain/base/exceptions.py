@@ -23,6 +23,11 @@ class MLChainAssertionError(MlChainError):
         MlChainError.__init__(self, msg, code, status_code)
 
 
+class MLChain404Error(MlChainError):
+    def __init__(self, msg, code="404", status_code=404):
+        MlChainError.__init__(self, msg, code, status_code)
+
+
 class MLChainSerializationError(MlChainError):
     def __init__(self, msg, code="serialization", status_code=422):
         MlChainError.__init__(self, msg, code, status_code)
