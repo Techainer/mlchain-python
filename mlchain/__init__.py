@@ -1,5 +1,13 @@
+# Mlchain Context
+from contextvars import ContextVar
+from typing import Any, Dict
+
+_request_scope_context_storage: ContextVar[Dict[Any, Any]] = ContextVar(
+    "mlchain_context"
+)
+
 # Parameters of MLchain
-__version__ = "0.1.9"
+__version__ = "0.2.0"
 HOST = "https://www.api.mlchain.ml"
 WEB_HOST = HOST
 API_ADDRESS = HOST
@@ -23,4 +31,3 @@ from .context import mlchain_context
 
 from .base.exceptions import *
 from .config import mlconfig
-

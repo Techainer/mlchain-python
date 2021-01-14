@@ -7,10 +7,10 @@ except Exception as ex:  # pragma: no cover
     warnings.warn("Can't import FlaskServer. {0}".format(ex))
 
 try:
-    from .quart_server import QuartServer
+    from .starlette_server import StarletteServer
 except Exception as ex:  # pragma: no cover
     import warnings
-    warnings.warn("Can't import QuartServer. {0}".format(ex))
+    warnings.warn("Can't import StarletteServer. {0}".format(ex))
 
 try:
     from .grpc_server import GrpcServer

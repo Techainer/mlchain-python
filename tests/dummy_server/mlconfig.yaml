@@ -3,7 +3,7 @@ version: '0.0.1'
 entry_file: server.py # python file contains object ServeModel
 host: localhost # host service
 port: 12345 # port service
-server: flask # option flask or quart or grpc
+server: flask # option flask or starlette or grpc
 wrapper: gunicorn
 cors: true
 gunicorn: # config apm-server if uses gunicorn wrapper
@@ -13,10 +13,3 @@ gunicorn: # config apm-server if uses gunicorn wrapper
   threads: 1
   workers: 5
   worker_class: 'gthread'
-  umask: '0'
-hypercorn:
-  timeout: 200
-  keepalive: 60
-  threads: 1
-  workers: 1
-  worker_class: 'uvloop'

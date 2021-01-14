@@ -188,6 +188,26 @@ class MLchainFormat(BaseFormat):
         return RawResponse(response=response, status=status,
                            headers={'Content-type': content_type})
 
+class AsyncMLchainFormat(MLchainFormat): 
+    async def parse_request(self, function_name, headers, form,
+                      files, data, request_context):
+        parameters = await files['__parameters__'][0].read()
+        serializer_type = headers.get('mlchain-serializer', 'json')
+        serializer = self.serializers.get(serializer_type, None)
+        if serializer is None:
+            raise MLChainSerializationError("Not found serializer {0}".format(serializer_type))
+        args, kwargs = serializer.decode(parameters)
+
+        for idx, value in enumerate(args):
+            if isinstance(value, str) and value.startswith('__file__') \
+                    and value in files:
+                args[idx] = await files[value][0].read()
+
+        for key, value in kwargs.items():
+            if isinstance(value, str) and value.startswith('__file__') \
+                    and value in files:
+                kwargs[key] = await files[value][0].read()
+        return args, kwargs
 
 class RawFormat(BaseFormat):
     def check(self, headers, form, files, data):

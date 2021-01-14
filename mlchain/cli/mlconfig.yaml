@@ -8,9 +8,12 @@ host: 0.0.0.0            # Host of service
 port: 8001               # Port service
 
 # Server config 
-server: flask            # Option flask or quart or grpc
-wrapper: None            # Option None or gunicorn or hypercorn
+server: starlette        # Option flask or starlette or grpc
+wrapper: gunicorn        # Option None or gunicorn
 cors: true               # Auto enable CORS
+cors_allow_origins:      # Allow origins for CORS
+  - "*"                  # Allow all incoming address  
+  
 static_folder:           # static folder for TemplateResponse
 static_url_path:         # static url path for TemplateResponse
 template_folder:         # template folder for TemplateResponse
@@ -18,18 +21,9 @@ template_folder:         # template folder for TemplateResponse
 # Gunicorn config - Use gunicorn for general case
 gunicorn: 
   timeout: 200            # The requests will be maximum 200 seconds in default, then when the requests is done, the worker will be restarted 
-  keepalive: 3            # Keep requests alive when inactive with client in 3 seconds default
   max_requests: 0         # Maximum serving requests until workers restart to handle over memory in Python 
   workers: 1              # Number of duplicate workers
   threads: 1              # Number of simultaneous threads in workers
-  worker_class: 'gthread' # Worker class gthread is fit with all case. Can use 'uvicorn.workers.UvicornWorker' which be higher performance sometimes 
-
-# Hypercorn config - Use hypercorn for async server with Quart 
-hypercorn: 
-  timeout: 200            # The requests will be maximum 200 seconds in default, then when the requests is done, the worker will be restarted 
-  keepalive: 3            # Keep requests alive when inactive with client in 3 seconds default
-  threads: 50             # Number of simultaneous threads in workers. Default: 50. Remember that some models can not call simultaneous, so you can use @non_thread() decorator to the function.
-  worker_class: 'uvloop'  # Worker class uvloop is fit with all case. 
 
 bind:
   - 'unix:/tmp/gunicorn.sock' # Using sock to make gunicorn faster 

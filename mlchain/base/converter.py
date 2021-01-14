@@ -3,7 +3,7 @@ import io
 import json
 from base64 import b64decode
 from typing import List, Union, Dict, Set
-from inspect import signature, _empty
+from inspect import signature, _empty, iscoroutinefunction
 from collections import defaultdict
 import numpy as np
 from PIL import Image, ImageSequence
@@ -312,10 +312,86 @@ class Converter:
                 for o_type in self.convert_dict[i_type]:
                     if o_type in out_type:
                         return self.convert_dict[i_type][o_type](value)
+
         if type(value) == self.FILE_STORAGE_TYPE:
             return self.convert_file(self._get_file_name(value), self._get_data(value), out_type)
+
+        for o_type in out_type:
+            if callable(getattr(o_type, "from_json", None)):
+                if iscoroutinefunction(o_type.from_json):
+                    raise MLChainAssertionError("You need to use Starlette Server to use async convert function")
+                else:
+                    return o_type.from_json(value)
+
         raise MLChainAssertionError("Not found converter from {0} to {1}".format(type(value), out_type))
 
+class AsyncConverter(Converter):
+    async def convert(self, value, out_type):
+        '''
+        Convert type of value to out_type
+        :param value:
+        :param out_type:
+        :return:
+        '''
+        origin, args = get_type(out_type)
+        if origin == _empty:
+            return value
+        if origin in [List, Set, Dict, list, set, dict] and args is not None:
+            if isinstance(value, (List, list)):
+                if origin in [List, list]:
+                    return [self.convert(v, args) for v in value]
+                if origin in [Set, set]:
+                    return set(self.convert(v, args) for v in value)
+            elif isinstance(value, (Dict, dict)):
+                if origin in [Dict, list]:
+                    if len(args) == 2:
+                        return {self.convert(k, args[0]): self.convert(v, args[1])
+                                for k, v in value.items()}
+                    if len(args) == 1:
+                        return {k: self.convert(v, args[0]) for k, v in value.items()}
+            else:
+                if type(value) == self.FILE_STORAGE_TYPE:
+                    byte_data = await self._get_data(value)
+                    return self.convert_file(self._get_file_name(value),
+                                             byte_data, out_type)
+                if origin in [List, list]:
+                    return [self.convert(value, args)]
+                if origin in [Set, set]:
+                    return {self.convert(value, args)}
+                raise MLChainAssertionError(
+                    "Can't convert value {0} to {1}".format(value, out_type),
+                    code="convert")
+        else:
+            try:
+                if isinstance(value, out_type):
+                    return value
+            except:
+                pass
+        if origin == Union:
+            out_type = args
+        else:
+            out_type = (out_type,)
+        if type(value) in out_type:
+            return value
+
+        for i_type in self.convert_dict:
+            if isinstance(value, i_type):
+                for o_type in self.convert_dict[i_type]:
+                    if o_type in out_type:
+                        return self.convert_dict[i_type][o_type](value)
+        
+        if type(value) == self.FILE_STORAGE_TYPE:
+            byte_data = await self._get_data(value)
+            return self.convert_file(self._get_file_name(value), byte_data, out_type)
+        
+        for o_type in out_type:
+            if callable(getattr(o_type, "from_json", None)):
+                if iscoroutinefunction(o_type.from_json):
+                    return await o_type.from_json(value)
+                else: 
+                    return o_type.from_json(value)
+
+        raise MLChainAssertionError("Not found converter from {0} to {1}".format(type(value), out_type))
 
 Converter.add_convert(lambda x: str(x), int, str)
 Converter.add_convert(str2ndarray)

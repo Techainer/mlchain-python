@@ -39,3 +39,7 @@ class MLChainConnectionError(MlChainError):
 class MLChainTimeoutError(MlChainError):
     def __init__(self, msg, code="timeout", status_code=500):
         MlChainError.__init__(self, msg, code, status_code)
+
+class MLChainConfigError(MlChainError):
+    def __init__(self, msg, code="config", status_code=500):
+        MlChainError.__init__(self, msg, code, status_code)

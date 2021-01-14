@@ -1,11 +1,13 @@
 import os
+import importlib
 import warnings
 from inspect import signature, _empty
 from collections import defaultdict
 from fuzzywuzzy.fuzz import ratio
 from mlchain.base import ServeModel
+from mlchain.base.log import logger
 from mlchain.base.serializer import JsonSerializer, MsgpackSerializer, MsgpackBloscSerializer
-from mlchain.base.converter import Converter
+from mlchain.base.converter import Converter, AsyncConverter
 from mlchain.base.exceptions import MLChainAssertionError
 import numpy as np 
 
@@ -61,11 +63,15 @@ class MLServer:
     convert_dict = defaultdict(dict)
     file_converters = {}
 
-    def __init__(self, model: ServeModel, name=None):
+    def __init__(self, model: ServeModel, name=None, version=None, api_format=None, authentication=None):
         if not isinstance(model, ServeModel):
             model = ServeModel(model)
         self.model = model
         self.name = name or model.name
+        self.version = version
+        self.api_format = api_format
+        self.authentication = authentication
+
         self.serializers_dict = {
             'application/json': JsonSerializer(),
             'application/msgpack': MsgpackSerializer(),
@@ -77,6 +83,8 @@ class MLServer:
             warnings.warn("Can't load MsgpackBloscSerializer. Use msgpack instead")
         self.converter = Converter()
 
+        self.initialize_app()
+        
     def _check_status(self):
         """
         Check status of a served model
@@ -93,30 +101,84 @@ class MLServer:
         :return: Nothing
         """
         raise NotImplementedError
-
-    def _initalize_app(self):
+    
+    def _register_swagger(self): 
         """
-        Initalize all endpoint of server
+        Add Swagger to URL
         """
+        raise NotImplementedError
+    
+    def register_swagger(self): 
+        """
+        Add Swagger to URL
+        """
+        return self._register_swagger()
 
-        self._add_endpoint('/api/get_params_<function_name>',
+    def add_endpoint(self, endpoint=None, endpoint_name=None,
+                      handler=None, methods=['GET', 'POST']):
+        """
+        Add one endpoint to the flask application. Accept GET, POST and PUT.
+        :param endpoint: Callable URL.
+        :param endpoint_name: Name of the Endpoint
+        :param handler: function to execute on call on the URL
+        :return: Nothing
+        """
+        return self._add_endpoint(endpoint=endpoint, endpoint_name=endpoint_name, handler=handler, methods=methods)
+
+    def _initialize_app(self):
+        """
+        Initialize some components of server
+        """
+        api_format = self.api_format
+        if isinstance(api_format, str):
+            try:
+                package, class_name = api_format.rsplit('.', 1)
+                api_format = importlib.import_module(package)
+                api_format = getattr(api_format, class_name)
+            except:
+                api_format = None
+        if isinstance(api_format, type):
+            api_format = api_format()
+
+        self.api_format_class = api_format
+        self.api_format = '{0}.{1}'.format(api_format.__class__.__module__,
+                                           api_format.__class__.__name__)
+
+    def initialize_app(self):
+        """
+        Initialize some components of server
+        """
+        return self._initialize_app()
+
+    def initialize_endpoint(self): 
+        """
+        Initialize Server Endpoint
+        """
+        self.add_endpoint('/api/get_params_<function_name>',
                            '_get_parameters_of_func',
                            handler=self.model._get_parameters_of_func, methods=['GET'])
-        self._add_endpoint('/api/des_func_<function_name>',
+        self.add_endpoint('/api/des_func_<function_name>',
                            '_get_description_of_func',
                            handler=self.model._get_description_of_func, methods=['GET'])
-        self._add_endpoint('/api/ping',
+        self.add_endpoint('/api/ping',
                            '_check_status',
                            handler=self._check_status, methods=['GET'])
-        self._add_endpoint('/api/description',
+        self.add_endpoint('/api/description',
                            '_get_all_description',
                            handler=self.model._get_all_description, methods=['GET'])
-        self._add_endpoint('/api/list_all_function',
+        self.add_endpoint('/api/list_all_function',
                            '_list_all_function',
                            handler=self.model._list_all_function, methods=['GET'])
-        self._add_endpoint('/api/list_all_function_and_description',
+        self.add_endpoint('/api/list_all_function_and_description',
                            '_list_all_function_and_description',
                            handler=self.model._list_all_function_and_description, methods=['GET'])
+
+        self._register_home()
+
+        try:
+            self._register_swagger()
+        except Exception as ex:
+            logger.error("Can't register swagger with error {0}".format(ex))
 
     def convert(self, value, out_type):
         return self.converter.convert(value, out_type)
@@ -172,3 +234,46 @@ class MLServer:
             kwgs[key] = value
         kwgs.update(kwargs)
         return kwgs
+
+class AsyncMLServer(MLServer):
+    async def _normalize_kwargs_to_valid_format(self, kwargs, func_):
+        """
+        Normalize data into right formats of func_
+        """
+        inspect_func_ = signature(func_)
+
+        accept_kwargs = "**" in str(inspect_func_)
+
+        # Check valid parameters
+        for key, value in list(kwargs.items()):
+            if key in inspect_func_.parameters:
+                req_type = inspect_func_.parameters[key].annotation
+                the_default = inspect_func_.parameters[key].default
+
+                if type(value) != req_type: 
+                    eq = value == the_default
+                    
+                    if isinstance(eq, np.ndarray): 
+                        if not np.all(eq): 
+                            kwargs[key] = await self.convert(value, req_type)
+                    elif not eq: 
+                        kwargs[key] = await self.convert(value, req_type)
+            elif not accept_kwargs:
+                suggest = None
+                fuzz = 0
+                for k in inspect_func_.parameters:
+                    if suggest is None:
+                        suggest = k
+                        fuzz = ratio(k.lower(), key.lower())
+                    elif ratio(k.lower(), key.lower()) > fuzz:
+                        suggest = k
+                        fuzz = ratio(k.lower(), key.lower())
+                kwargs.pop(key)
+
+        missing = []
+        for key, parameter in inspect_func_.parameters.items():
+            if key not in kwargs and parameter.default == _empty:
+                missing.append(key)
+        if len(missing) > 0:
+            raise MLChainAssertionError("Missing params {0}".format(missing))
+        return kwargs

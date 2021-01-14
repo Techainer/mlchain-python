@@ -30,7 +30,6 @@ gunicorn: # config apm-server if uses gunicorn wrapper
   max_requests: 0
   threads: 1
   worker_class: 'gthread'
-  umask: '0'
 ```
 
 You can also override the arguments in `mlchain run` command to quickly test out a change. For example:

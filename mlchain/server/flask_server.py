@@ -1,4 +1,3 @@
-import importlib
 import os
 import time
 import json
@@ -189,8 +188,8 @@ class FlaskView(View):
             return headers, form, files, data
         except RequestEntityTooLarge:
             raise MlChainError("Request too large", status_code=413)
-        except:
-            raise
+        except Exception as ex:
+            raise MlChainError("Parse request data error: {0}".format(ex), status_code=500)
 
     def make_response(self, response: Union[RawResponse, FileResponse]):
         if isinstance(response, RawResponse):
@@ -221,38 +220,28 @@ class FlaskView(View):
 class FlaskServer(MLServer):
     def __init__(self, model: ServeModel, name=None, version='0.0',
                  authentication=None, api_format=None,
-                 static_folder=None, template_folder=None, static_url_path=None):
-        MLServer.__init__(self, model, name)
+                 static_folder=None, template_folder=None, static_url_path:str="static"):
+        MLServer.__init__(self, model, name, version, api_format, authentication)
+
+        if not isinstance(static_url_path, str): 
+            static_url_path = "static"
         self.app = Flask(self.name, static_folder=static_folder,
                          template_folder=template_folder,
                          static_url_path=static_url_path)
         self.app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
         self.app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
-        self.version = version
         self.converter = Converter(FileStorage, self._get_file_name, self._get_data)
-        self.register_home()
-        self.authentication = authentication
-        self._initalize_app()
-        if isinstance(api_format, str):
-            try:
-                package, class_name = api_format.rsplit('.', 1)
-                api_format = importlib.import_module(package)
-                api_format = getattr(api_format, class_name)
-            except:
-                api_format = None
-        if isinstance(api_format, type):
-            api_format = api_format()
 
-        self.api_format = '{0}.{1}'.format(api_format.__class__.__module__,
-                                           api_format.__class__.__name__)
         self.app.add_url_rule('/call/<function_name>', 'call',
-                              FlaskView(self, api_format, self.authentication),
+                              FlaskView(self, self.api_format_class, self.authentication),
                               methods=['POST', 'GET'], strict_slashes=False)
         self.app.add_url_rule('/call_raw/<function_name>', 'call_raw',
                               FlaskView(self, RawFormat(), self.authentication),
                               methods=['POST', 'GET'], strict_slashes=False)
         
+        self.initialize_endpoint()
+
     def _get_file_name(self, storage):
         return storage.filename
 
@@ -275,7 +264,7 @@ class FlaskServer(MLServer):
                                                   api_keys=None),
                               methods=methods)
 
-    def register_swagger(self):
+    def _register_swagger(self):
         swagger_ui = Blueprint("swagger", __name__,
                                static_folder=os.path.join(TEMPLATE_PATH, 'swaggerui'))
 
@@ -308,7 +297,7 @@ class FlaskServer(MLServer):
 
         self.app.register_blueprint(swagger_ui)
 
-    def register_home(self):
+    def _register_home(self):
         home_ui = Blueprint("home",
                             __name__,
                             static_folder=STATIC_PATH,
@@ -322,9 +311,9 @@ class FlaskServer(MLServer):
         self.app.register_blueprint(home_ui)
 
     def run(self, host='127.0.0.1', port=8080, bind=None, cors=False, cors_resources={},
-            cors_allow_origins='*', gunicorn=False, debug=False,
-            use_reloader=False, workers=1, timeout=60, keepalive=10,
-            max_requests=0, threads=1, worker_class='gthread', umask='0',
+            cors_allow_origins:list=['*'], gunicorn=False, debug=False,
+            use_reloader=False, workers=1, timeout=200, keepalive=3,
+            max_requests=0, threads=1, worker_class='gthread', 
             ngrok=False, model_id=None, **kwargs):
         """
         Run a server from a Python class
@@ -337,7 +326,7 @@ class FlaskServer(MLServer):
         :whitelist: Served all function name inside whitelist
         :cors: Enable CORS or not
         :cors_resources: Config Resources of flask-cors
-        :cors_allow_origins: Allow host of cors
+        :cors_allow_origins: Allow hosts of cors
         :gunicorn: Run with Gunicorn or not
         :debug: Debug or not
         :use_reloader: Default False, which is using 1 worker in debug instead of 2
@@ -347,7 +336,6 @@ class FlaskServer(MLServer):
         :threads: The number of worker threads for handling requests. Be careful, threads would break your result if it is bigger than 1
         :worker_class: The type of workers to use.
         :max_requests: Max Request to restart Gunicorn Server, default is 0 which means no restart
-        :umask: A bit mask for the file mode on files written by Gunicorn.
         :kwargs: Other Gunicorn options
         """
         try:
@@ -399,6 +387,10 @@ class FlaskServer(MLServer):
             if bind is None:
                 bind = [bind_host_port]
 
+            if "uvicorn" in worker_class.lower(): 
+                logger.warning("Change worker_class from {0} to {1} due to compatible with Flask".format(worker_class, "gthread"))
+                worker_class = "gthread"
+
             logger.info("-" * 80)
             logger.info("Served model with Flask and Gunicorn at bind={}".format(bind))
             logger.info("Number of workers: {}".format(workers))
@@ -412,4 +404,4 @@ class FlaskServer(MLServer):
             GunicornWrapper(self.app, bind=bind, workers=workers, timeout=timeout,
                             keepalive=keepalive, max_requests=max_requests,
                             loglevel=loglevel, worker_class=worker_class,
-                            threads=threads, umask=umask, **kwargs).run()
+                            threads=threads, **kwargs).run()

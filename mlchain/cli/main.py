@@ -4,7 +4,7 @@ import platform
 import sys
 import click
 import flask
-import quart
+import starlette
 import grpc
 from .init import init_command
 from .run import run_command
@@ -17,14 +17,14 @@ def get_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
 
-    message = "Python %(python)s\nMlChain %(mlchain)s\nFlask %(flask)s\nQuart %(quart)s\n"
+    message = "Python %(python)s\nMlChain %(mlchain)s\nFlask %(flask)s\nStarlette %(starlette)s\n"
     click.echo(
         message
         % {
             "python": platform.python_version(),
             "mlchain": __version__,
             "flask": flask.__version__,
-            "quart": quart.__version__
+            "starlette": starlette.__version__
         },
         color=ctx.color,
     )

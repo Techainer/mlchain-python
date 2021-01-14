@@ -2,4 +2,4 @@ from mlchain.base.serializer import JsonSerializer, MsgpackSerializer, MsgpackBl
     JpgMsgpackSerializer, PngMsgpackSerializer
 from .serve_model import ServeModel, non_thread, batch
 from .log import logger
-from .converter import Converter
+from .converter import Converter, AsyncConverter

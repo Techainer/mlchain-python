@@ -98,6 +98,7 @@ class HttpClient(MLClient):
 
     def _post(self, function_name, headers=None, args=None, kwargs=None):
         files = []
+        args = list(args)
         for idx, value in enumerate(args):
             if isinstance(value, bytes):
                 file_name = '__file__{0}'.format(idx)

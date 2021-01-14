@@ -80,7 +80,6 @@ gunicorn: # config gunicorn wrapper
   max_requests: 0 # The maximum number of requests a worker will process before restarting.
   threads: 1 # number of threads
   worker_class: 'gthread'
-  umask: '0'# A bit mask for the file mode on files written by Gunicorn.
 ```
 
 Let's go through each option and see what each one does:
@@ -122,8 +121,6 @@ Wrapper for server.
 - <b> max_requests:</b> The maximum number of requests a worker will process before restarting.
 - <b> threads:</b> The number of worker threads for handling requests.
 - <b> worker_class:</b> The type of workers to use.
-- <b> umask:</b> A bit mask for the file mode on files written by Gunicorn.
-
 
 When you are done configurating, run
 

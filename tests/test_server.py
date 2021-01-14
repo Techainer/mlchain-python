@@ -14,7 +14,7 @@ import numpy as np
 from mlchain.base import ServeModel
 from mlchain.server.flask_server import FlaskServer
 from mlchain.server.grpc_server import GrpcServer
-from mlchain.server.quart_server import QuartServer
+from mlchain.server.starlette_server import StarletteServer
 from mlchain.decorators import except_serving
 from mlchain.base.serve_model import batch,non_thread
 
@@ -86,12 +86,12 @@ class TestServer(unittest.TestCase):
         if self.is_not_windows:
             test_breaking_process(flask_model, port=10001)
     
-    def test_quart_server_init(self):
-        logger.info("Running quart server init test")
+    def test_starlette_server_init(self):
+        logger.info("Running starllete server init test")
         model = ServeModel(original_model)
-        quart_model = QuartServer(model)
-        # if self.is_not_windows:
-        #     test_breaking_process(quart_model, port=10002)
+        starlette_model = StarletteServer(model)
+        if self.is_not_windows:
+            test_breaking_process(starlette_model, port=10002)
 
     def test_grpc_server_init(self):
         logger.info("Running grpc server init test")
