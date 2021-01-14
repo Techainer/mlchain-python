@@ -1,6 +1,18 @@
 language: python
 arch:
   - amd64
+  - arm64
+
+python:
+  - 3.6
+  - 3.7
+  - 3.8
+  - 3.9
+
+os:
+  - linux
+  - osx
+  - windows
 
 stages:
   - sanity_check
@@ -8,7 +20,9 @@ stages:
   - test
   - deploy
 
+
 jobs:
+  fail_fast: true
   include:
     - stage: sanity_check
       name: "Sanity check"
@@ -17,34 +31,9 @@ jobs:
       install:
         - pip install -U pylint pylint-exit 
       script:
-        - pylint --output-format=text *.py || pylint-exit $? 
+        - pylint --output-format=text $(git ls-files '*.py') || pylint-exit $? 
 
     - stage: build
-      name: "Build on Python 3.7 Linux"
-      os: linux
-      python: 3.7
-      install:
-        - pip install -U scikit-build awscli pip
-        - pip install -U -r requirements.txt
-      script:
-        - python setup.py bdist_wheel
-        - python setup.py install
-
-    - stage: build
-      name: "Build on Python 3.6 Linux"
-      os: linux
-      python: 3.6
-      install:
-        - pip install -U scikit-build awscli pip
-        - pip install -U -r requirements.txt
-      script:
-        - python setup.py bdist_wheel
-        - python setup.py install
-
-    - stage: build
-      name: "Build on Python 3.7 MacOS"
-      os: osx
-      language: shell
       install:
         - pip3 install -U scikit-build awscli pip
         - pip3 install -U -r requirements.txt
@@ -53,7 +42,7 @@ jobs:
         - python3 setup.py install
 
     - stage: build
-      name: "Build on Python 3.7 Windows"
+      name: "Build on Windows"
       os: windows
       language: shell
       before_install:
@@ -69,41 +58,6 @@ jobs:
 
 
     - stage: test
-      name: "Test on Python 3.7 Linux"
-      os: linux
-      python: 3.7
-      install:
-        - pip install -U scikit-build pytest coverage codecov pip
-        - pip install -U attrs
-      script:
-        - pip install .
-        - python -m coverage run --source=. -m unittest discover
-        - python -m coverage combine
-        - python -m coverage report
-      after_success:
-        - codecov
-
-
-    - stage: test
-      name: "Test on Python 3.6 Linux"
-      os: linux
-      python: 3.6
-      install:
-        - pip install -U scikit-build pytest coverage codecov pip
-        - pip install -U attrs
-      script:
-        - pip install .
-        - python -m coverage run --source=. -m unittest discover
-        - python -m coverage combine
-        - python -m coverage report
-      after_success:
-        - codecov
-
-
-    - stage: test
-      name: "Test on Python 3.7 MacOS"
-      os: osx
-      language: shell
       install:
         - pip3 install -U scikit-build pytest coverage codecov pip
         - pip3 install -U attrs
@@ -116,7 +70,7 @@ jobs:
         - codecov
 
     - stage: test
-      name: "Test on Python 3.7 Windows"
+      name: "Test on Windows"
       os: windows
       language: shell
       before_install:
