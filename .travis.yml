@@ -24,9 +24,9 @@ stages:
 jobs:
   include:
     - stage: sanity_check
-      name: "Sanity check"
       os: linux
       python: 3.7
+      arch: amd64
       install:
         - pip install -U pylint pylint-exit 
       script:
@@ -39,6 +39,8 @@ jobs:
       script:
         - python3 setup.py bdist_wheel
         - python3 setup.py install
+      after_success:
+        - echo "Install successful"
 
     # - stage: build
     #   name: "Build on Windows"
@@ -89,7 +91,9 @@ jobs:
     - stage: deploy
       if: tag IS present
       name:  "Deploy to PyPI"
+      os: linux
       python: 3.7
+      arch: amd64
       script:
         - echo "Already tested before"
       deploy:
