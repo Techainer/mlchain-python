@@ -115,6 +115,7 @@ def run_command(
         kws = [f"--entry_file={entry_file}"] + kws
         entry_file = None
     from mlchain import config as mlconfig
+    from mlchain import mlconfig as mlchain_config
 
     default_config = False
 
@@ -174,14 +175,21 @@ def run_command(
             "Gunicorn warper are not supported on Windows. Switching to None instead."
         )
         wrapper = None
-    workers = None
+
     if "gunicorn" in config:
-        workers = mlconfig.get_value(workers, config["gunicorn"], "workers", None)
+        if "workers" in config["gunicorn"]:
+            workers = config["gunicorn"]["workers"]
+        
+        if mlchain_config.gunicorn_workers is not None:
+            workers = mlchain_config.gunicorn_workers
     workers = int(workers) if workers is not None else 1
 
-    threads = None
     if "gunicorn" in config:
-        threads = mlconfig.get_value(threads, config["gunicorn"], "threads", None)
+        if "threads" in config["gunicorn"]:
+            threads = config["gunicorn"]["threads"]
+        
+        if mlchain_config.gunicorn_threads is not None:
+            threads = mlchain_config.gunicorn_threads
     threads = int(threads) if threads is not None else 1
 
     name = mlconfig.get_value(name, config, "name", None)
