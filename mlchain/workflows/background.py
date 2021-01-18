@@ -1,4 +1,5 @@
 import inspect
+import time
 from threading import Thread, Event
 import trio
 from .task import Task
@@ -13,6 +14,7 @@ class BackgroundTask(Thread):
 
         Thread.__init__(self)
         self.stopped = Event()
+        self.is_done = False
         self.interval = interval
         self.task = task
         self.max_repeat = max_repeat
@@ -85,6 +87,12 @@ class BackgroundTask(Thread):
             
         if self.callback is not None:
             self.pool_limit_callback.shutdown(wait=True)
+        self.is_done = True
+
+    def wait(self, interval: float = 0.1):
+        while not self.is_done:
+            time.sleep(interval)
+        return self.output
 
 class Background:
     """
