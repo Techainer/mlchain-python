@@ -127,6 +127,8 @@ class Serializer:
         except KeyError:
             if callable(getattr(obj, "to_json", None)):
                 return obj.to_json()
+            if callable(getattr(obj, "dump_json", None)):
+                return obj.dump_json()
             raise MLChainSerializationError('No serializer found for type {0}, or you can define "to_json" function in class'
                                             .format(orig_type))
 
