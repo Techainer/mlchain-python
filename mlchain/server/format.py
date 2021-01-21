@@ -8,6 +8,7 @@ from .base import RawResponse, JsonResponse, MLChainResponse
 from sentry_sdk import add_breadcrumb, capture_exception
 import re
 import os
+from mlchain import mlchain_context
 
 def logging_error(exception, true_exception = None): 
     string_exception = "\n".join(exception)
@@ -64,7 +65,8 @@ class BaseFormat:
                 'output': output,
                 'time': request_context.get('time_process'),
                 'api_version': request_context.get('api_version'),
-                'mlchain_version': __version__
+                'mlchain_version': __version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             return JsonResponse(output, 200)
         else:
@@ -74,7 +76,8 @@ class BaseFormat:
                     'error': exception.msg,
                     'code': exception.code,
                     'api_version': request_context.get('api_version'),
-                    'mlchain_version': __version__
+                    'mlchain_version': __version__,
+                    "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
                 logging_error([error], true_exception = exception)
                 return JsonResponse(output, exception.status_code)
@@ -83,7 +86,8 @@ class BaseFormat:
                 output = {
                     'error': error,
                     'api_version': request_context.get('api_version'),
-                    'mlchain_version': __version__
+                    'mlchain_version': __version__,
+                    "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
                 logging_error(error, true_exception = exception)
                 return JsonResponse(output, 500)
@@ -92,7 +96,8 @@ class BaseFormat:
                 output = {
                     'error': exception,
                     'api_version': request_context.get('api_version'),
-                    'mlchain_version': __version__
+                    'mlchain_version': __version__,
+                    "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
                 logging_error(exception)
                 return JsonResponse(output, 500)
@@ -142,7 +147,8 @@ class MLchainFormat(BaseFormat):
                 'output': output,
                 'time': request_context.get('time_process'),
                 'api_version': request_context.get('api_version'),
-                'mlchain_version': __version__
+                'mlchain_version': __version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             status = 200
         else:
@@ -152,7 +158,8 @@ class MLchainFormat(BaseFormat):
                     'error': exception.msg,
                     'code': exception.code,
                     'api_version': request_context.get('api_version'),
-                    'mlchain_version': __version__
+                    'mlchain_version': __version__,
+                    "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
                 logging_error([error], true_exception = exception)
                 return JsonResponse(output, exception.status_code)
@@ -161,7 +168,8 @@ class MLchainFormat(BaseFormat):
                 output = {
                     'error': error,
                     'api_version': request_context.get('api_version'),
-                    'mlchain_version': __version__
+                    'mlchain_version': __version__,
+                    "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
 
                 logging_error(error, true_exception = exception)
@@ -172,7 +180,8 @@ class MLchainFormat(BaseFormat):
                 output = {
                     'error': exception,
                     'api_version': request_context.get('api_version'),
-                    'mlchain_version': __version__
+                    'mlchain_version': __version__,
+                    "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
                 status = 500
                 return JsonResponse(output, 500)

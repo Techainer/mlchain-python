@@ -50,7 +50,8 @@ class GrpcServer(mlchain_pb2_grpc.MLChainServiceServicer, MLServer):
                 'output': output,
                 'time': duration,
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
         except MlChainError as ex:
             err = ex.msg
@@ -60,7 +61,8 @@ class GrpcServer(mlchain_pb2_grpc.MLChainServiceServicer, MLServer):
                 'time': 0,
                 'code': ex.code,
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
 
         except Exception as ex:
@@ -68,7 +70,8 @@ class GrpcServer(mlchain_pb2_grpc.MLChainServiceServicer, MLServer):
                 'output': str(ex),
                 'time': 0,
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
         return mlchain_pb2.Output(output=serializer.encode(output))
 

@@ -17,6 +17,7 @@ from .autofrontend import register_autofrontend
 from .base import MLServer, Converter, RawResponse, FileResponse, TemplateResponse
 from .format import RawFormat
 from .view import View
+from mlchain import mlchain_context
 
 APP_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(APP_PATH, 'server/templates')
@@ -107,7 +108,8 @@ class FlaskEndpointAction:
                 output = {
                     'error': error,
                     'api_version': self.version,
-                    'mlchain_version': mlchain.__version__
+                    'mlchain_version': mlchain.__version__,
+                    "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
                 return response_function(output, 401)
         try:
@@ -123,6 +125,7 @@ class FlaskEndpointAction:
                                   content_type=output.content_type)
                 output.headers['mlchain_version'] = mlchain.__version__
                 output.headers['api_version'] = self.version
+                output.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
                 return output
             if isinstance(output, FileResponse):
                 file = send_file(output.path, mimetype=output.mimetype)
@@ -130,6 +133,7 @@ class FlaskEndpointAction:
                     file.headers[k] = v
                 file.headers['mlchain_version'] = mlchain.__version__
                 file.headers['api_version'] = self.version
+                file.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
                 return file
             if isinstance(output, Response):
                 return output
@@ -138,7 +142,8 @@ class FlaskEndpointAction:
                 'output': output,
                 'time': round(time.time() - start_time, 2),
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             return response_function(output, 200)
         except MlChainError as ex:
@@ -149,7 +154,8 @@ class FlaskEndpointAction:
                 'time': round(time.time() - start_time, 2),
                 'code': ex.code,
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             return response_function(output, ex.status_code)
         except AssertionError as ex:
@@ -159,7 +165,8 @@ class FlaskEndpointAction:
                 'error': err,
                 'time': round(time.time() - start_time, 2),
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             return response_function(output, 422)
         except Exception:
@@ -169,7 +176,8 @@ class FlaskEndpointAction:
                 'error': err,
                 'time': round(time.time() - start_time, 2),
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             return response_function(output, 500)
 
@@ -199,6 +207,7 @@ class FlaskView(View):
                               content_type=response.content_type)
             output.headers['mlchain_version'] = mlchain.__version__
             output.headers['api_version'] = self.server.version
+            output.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
             return output
             
         if isinstance(response, FileResponse):
@@ -207,6 +216,7 @@ class FlaskView(View):
                 file.headers[k] = v
             file.headers['mlchain_version'] = mlchain.__version__
             file.headers['api_version'] = self.server.version
+            file.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
             return file
 
         if isinstance(response, TemplateResponse):

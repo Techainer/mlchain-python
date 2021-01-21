@@ -24,7 +24,7 @@ from .swagger import SwaggerTemplate
 from .view import StarletteAsyncView
 from .autofrontend import register_autofrontend
 from starlette.datastructures import UploadFile
-
+from mlchain import mlchain_context
 from starlette.responses import FileResponse as StarletteFileResponse
 
 APP_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -121,7 +121,8 @@ class StarletteEndpointAction:
                 output = {
                     'error': error,
                     'api_version': self.version,
-                    'mlchain_version': mlchain.__version__
+                    'mlchain_version': mlchain.__version__.
+                    "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
                 return await response_function(output, 401)
         try:
@@ -147,6 +148,7 @@ class StarletteEndpointAction:
                                   content_type=output.content_type)
                 output.headers['mlchain_version'] = mlchain.__version__
                 output.headers['api_version'] = self.version
+                output.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
                 return output
 
             if isinstance(output, FileResponse):
@@ -155,6 +157,7 @@ class StarletteEndpointAction:
                     file.headers[k] = v
                 file.headers['mlchain_version'] = mlchain.__version__
                 file.headers['api_version'] = self.version
+                file.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
                 return file
 
             if isinstance(output, Response):
@@ -164,7 +167,8 @@ class StarletteEndpointAction:
                 'output': output,
                 'time': round(time.time() - start_time, 2),
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
 
             return await response_function(output, 200)
@@ -177,7 +181,8 @@ class StarletteEndpointAction:
                 'time': round(time.time() - start_time, 2),
                 'code': ex.code,
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             return await response_function(output, ex.status_code)
         except AssertionError as ex:
@@ -187,7 +192,8 @@ class StarletteEndpointAction:
                 'error': err,
                 'time': round(time.time() - start_time, 2),
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             return await response_function(output, 422)
         except Exception as ex:
@@ -197,7 +203,8 @@ class StarletteEndpointAction:
                 'error': err,
                 'time': round(time.time() - start_time, 2),
                 'api_version': self.version,
-                'mlchain_version': mlchain.__version__
+                'mlchain_version': mlchain.__version__,
+                "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
             }
             return await response_function(output, 500)
 
@@ -240,6 +247,7 @@ class StarletteView(StarletteAsyncView):
                               media_type=response.content_type)
             output.headers['mlchain_version'] = mlchain.__version__
             output.headers['api_version'] = self.server.version
+            output.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
             return await output(scope, receive, send)
 
         if isinstance(response, FileResponse):
@@ -248,6 +256,7 @@ class StarletteView(StarletteAsyncView):
                 file.headers[k] = v
             file.headers['mlchain_version'] = mlchain.__version__
             file.headers['api_version'] = self.server.version
+            file.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
             return await file(scope, receive, send)
 
         if isinstance(response, TemplateResponse):
