@@ -121,7 +121,7 @@ class StarletteEndpointAction:
                 output = {
                     'error': error,
                     'api_version': self.version,
-                    'mlchain_version': mlchain.__version__.
+                    'mlchain_version': mlchain.__version__,
                     "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
                 }
                 return await response_function(output, 401)
