@@ -37,7 +37,7 @@ from httpx import (
     WriteError,
     WriteTimeout,
 )
-from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError, MlChainError
+from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError
 
 class AsyncStorage:
     def __init__(self, function):
@@ -196,9 +196,6 @@ class MLClient:
             output = None
             try:
                 output = self._post(function_name, context, args, kwargs)
-                if output.status_code == 500:
-                    raise MlChainError(msg="Client call into Server {0}. But function {1} raised an error. POST".format(
-                        self.api_address, function_name))
             except ConnectError: 
                 raise MLChainConnectionError(msg="Client call can not connect into Server: {0}. Function: {1}. POST".format(self.api_address, function_name))
             except TimeoutError: 
@@ -230,8 +227,6 @@ class MLClient:
             output = None
             try:
                 output = self._get(api_name, self.headers(), timeout)
-                if output.status_code == 500:
-                    raise MlChainError(msg="Client call into Server {0}. But function {1} raised an error. GET".format(self.api_address, api_name))
             except ConnectError: 
                 raise MLChainConnectionError(msg="Client call can not connect into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
             except TimeoutError: 
