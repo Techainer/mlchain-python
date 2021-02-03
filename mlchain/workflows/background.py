@@ -79,6 +79,8 @@ class BackgroundTask(Thread):
                     self.pool_limit.submit(self.get_output, self.task)
         
         self.pool_limit.shutdown(wait=True)
+        self.is_done = True
+
         if isinstance(self.output, tuple) and len(self.output) == 2 and self.output[0] == "MLCHAIN_BACKGROUND_ERROR": 
             if self.pass_fail_job: 
                 logging.error("BACKGROUND CALL ERROR: {0}".format(self.output[1]))
@@ -87,7 +89,6 @@ class BackgroundTask(Thread):
             
         if self.callback is not None:
             self.pool_limit_callback.shutdown(wait=True)
-        self.is_done = True
 
     def wait(self, interval: float = 0.1):
         while not self.is_done:
