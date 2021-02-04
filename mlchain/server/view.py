@@ -91,9 +91,9 @@ class View:
         return self.call_function(function_name=function_name, **kwargs)
 
     def call_function(self, function_name, **kws):
-        with push_scope() as scope:
+        with push_scope() as sentry_scope:
             transaction_name = "{0}  ||  {1}".format(mlconfig.MLCHAIN_SERVER_NAME, function_name)
-            scope.transaction = transaction_name
+            sentry_scope.transaction = transaction_name
             
             with start_transaction(op="task", name=transaction_name):
                 uid = self.init_context()
@@ -146,6 +146,8 @@ class StarletteAsyncView(View):
 
         self.mlchain_format = AsyncMLchainFormat()
         self.formats = [self.mlchain_format]
+        if isinstance(formatter, BaseFormat):
+            self.formats.insert(0, formatter)
 
     async def parse_data(self):
         return super().parse_data()
@@ -159,6 +161,7 @@ class StarletteAsyncView(View):
         return await self.call_function(function_name, request, scope, receive, send, **kwargs)
         
     async def call_function(self, function_name, request, scope, receive, send, **kws):
+        function_name = function_name.strip("/")
         with push_scope() as scope:
             transaction_name = "{0}  ||  {1}".format(mlconfig.MLCHAIN_SERVER_NAME, function_name)
             scope.transaction = transaction_name
