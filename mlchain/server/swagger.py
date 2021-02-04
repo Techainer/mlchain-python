@@ -102,6 +102,10 @@ type_map = {
     List[np.ndarray]: {
         "type": "string",
         "format": "binary"
+    },
+    bytes: {
+        "type": "string",
+        "format": "binary"
     }
 }
 
