@@ -339,25 +339,25 @@ class AsyncConverter(Converter):
         if origin in [List, Set, Dict, list, set, dict] and args is not None:
             if isinstance(value, (List, list)):
                 if origin in [List, list]:
-                    return [self.convert(v, args) for v in value]
+                    return [await self.convert(v, args) for v in value]
                 if origin in [Set, set]:
-                    return set(self.convert(v, args) for v in value)
+                    return set(await self.convert(v, args) for v in value)
             elif isinstance(value, (Dict, dict)):
                 if origin in [Dict, list]:
                     if len(args) == 2:
-                        return {self.convert(k, args[0]): self.convert(v, args[1])
+                        return {await self.convert(k, args[0]): await self.convert(v, args[1])
                                 for k, v in value.items()}
                     if len(args) == 1:
-                        return {k: self.convert(v, args[0]) for k, v in value.items()}
+                        return {k: await self.convert(v, args[0]) for k, v in value.items()}
             else:
                 if type(value) == self.FILE_STORAGE_TYPE:
                     byte_data = await self._get_data(value)
                     return self.convert_file(self._get_file_name(value),
                                              byte_data, out_type)
                 if origin in [List, list]:
-                    return [self.convert(value, args)]
+                    return [await self.convert(value, args)]
                 if origin in [Set, set]:
-                    return {self.convert(value, args)}
+                    return {await self.convert(value, args)}
                 raise MLChainAssertionError(
                     "Can't convert value {0} to {1}".format(value, out_type),
                     code="convert")
