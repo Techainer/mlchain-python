@@ -142,6 +142,10 @@ class MLchainFormat(BaseFormat):
 
     def make_response(self, function_name, headers, output,
                       request_context, exception=None):
+        if isinstance(output, MlChainError):
+            exception = output
+            output = None
+            
         if exception is None:
             output = {
                 'output': output,
