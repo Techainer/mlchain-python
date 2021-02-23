@@ -11,7 +11,9 @@ from .exceptions import MLChainAssertionError
 from ..config import mlconfig
 
 cv2 = None
-ALL_LOWER_TRUE = ["true", "yes", "yeah", "y"]
+ALL_LOWER_TRUE = set(["true", "yes", "yeah", "y"])
+ALL_LOWER_FALSE = set(["none", 'false', 'n', 'null', 'no'])
+ALL_LOWER_NULL = set(['none', 'null', 'nil'])
 
 if mlconfig.image_rgba is None:
     CV2FLAG = 1
@@ -29,7 +31,7 @@ def import_cv2():
 
 
 def str2ndarray(value: str) -> np.ndarray:
-    if value.lower() in ['none', 'null', 'nil']:
+    if value.lower() in ALL_LOWER_NULL:
         return None
     if value[0:4] == 'http':
         from mlchain.base.utils import is_image_url_and_ready
@@ -98,7 +100,7 @@ def str2float(value: str) -> float:
 def str2bool(value: str) -> bool:
     if value.lower() in ALL_LOWER_TRUE:
         return True
-    if value.lower() in ["none", 'false', 'n', 'null', 'no']:
+    if value.lower() in ALL_LOWER_FALSE:
         return False
     raise MLChainAssertionError("Can't convert {0} to type boolean".format(value))
 
@@ -441,7 +443,7 @@ def pilimread_list(filename, img_bytes) -> List[Image.Image]:
 
 
 def str2pil(value: str) -> Image.Image:
-    if value.lower() in ['none', 'null', 'nil']:
+    if value.lower() in ALL_LOWER_NULL:
         return None
     if value[0:4] == 'http':
         from mlchain.base.utils import is_image_url_and_ready
