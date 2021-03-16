@@ -100,7 +100,7 @@ class HttpClient(MLClient):
             **headers
         }
 
-        with httpx.Client(timeout=timeout or self.timeout) as client:
+        with httpx.Client(timeout=timeout or self.timeout, verify=False) as client:
             output = client.get("{0}/api/{1}".format(self.api_address, api_name),
                                 headers=headers)
             if output.status_code != 200:
@@ -146,7 +146,7 @@ class HttpClient(MLClient):
                                           'application/octet-stream')))
                 kwargs[key] = file_name
 
-        with httpx.Client(timeout=self.timeout) as client:
+        with httpx.Client(timeout=self.timeout, verify=False) as client:
             input_encoded = self.serializer.encode((args, kwargs))
             files.append(("__parameters__", ('parameters', BytesIO(input_encoded),
                                              'application/octet-stream')))
