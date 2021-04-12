@@ -31,6 +31,7 @@ def non_thread(timeout=-1):
 
         f.__signature__ = signature(func)
         f.__qualname__ = func.__qualname__
+        f.__doc__ = func.__doc__
         return f
 
     return wrapper

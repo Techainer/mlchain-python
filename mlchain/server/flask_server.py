@@ -301,7 +301,15 @@ class FlaskServer(MLServer):
                                            description=self.model.model.__doc__,
                                            version=self.model.name)
         for name, func in self.model.get_all_func().items():
-            swagger_template.add_endpoint(func, f'/call/{name}', tags=[self.name])
+            swagger_template.add_endpoint(func, f'/call/{name}', tags=["MlChain Format APIs"])
+            swagger_template.add_endpoint(func, f'/call_raw/{name}', tags=["MlChain Raw Output APIs"])
+
+        swagger_template.add_core_endpoint(self.model._get_parameters_of_func, '/api/get_params/{function_name}', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._get_description_of_func, '/api/des_func/{function_name}', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self._check_status, '/api/ping', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._get_all_description, '/api/description', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._list_all_function, '/api/list_all_function', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._list_all_function_and_description, '/api/list_all_function_and_description', tags=["MlChain Core APIs"])
 
         SWAGGER_URL = '/swagger'
 

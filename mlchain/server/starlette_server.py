@@ -99,6 +99,7 @@ class StarletteEndpointAction:
                 uid = self.init_context()
 
                 request = Request(scope, receive)
+                kwargs.update(request.path_params)
 
                 # If data POST is in msgpack format
                 content_type = request.headers.get('content-type', 'application/json')
@@ -332,6 +333,11 @@ class StarletteServer(AsyncMLServer):
         return await storage.read()
 
     async def convert(self, value, out_type):
+        """
+        Convert the value in to out_type
+        :value: The value
+        :out_type: Expected type
+        """
         return await self.converter.convert(value, out_type)
         
     def _add_endpoint(self, endpoint=None, endpoint_name=None,
@@ -343,7 +349,7 @@ class StarletteServer(AsyncMLServer):
         :param handler: function to execute on call on the URL
         :return: Nothing
         """
-        self.app.add_route(path=endpoint, name=endpoint_name,
+        self.app.add_route(path=endpoint.replace("<", "{").replace(">", "}").replace("{function_name}", "{function_name:path}"), name=endpoint_name,
                               route=StarletteEndpointAction(handler,
                                                   self.serializers_dict,
                                                   version=self.version,
@@ -357,7 +363,15 @@ class StarletteServer(AsyncMLServer):
                                            description=self.model.model.__doc__,
                                            version=self.model.name)
         for name, func in self.model.get_all_func().items():
-            swagger_template.add_endpoint(func, f'/call/{name}', tags=[self.name])
+            swagger_template.add_endpoint(func, f'/call/{name}', tags=["MlChain Format APIs"])
+            swagger_template.add_endpoint(func, f'/call_raw/{name}', tags=["MlChain Raw Output APIs"])
+
+        swagger_template.add_core_endpoint(self.model._get_parameters_of_func, '/api/get_params/{function_name}', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._get_description_of_func, '/api/des_func/{function_name}', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self._check_status, '/api/ping', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._get_all_description, '/api/description', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._list_all_function, '/api/list_all_function', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._list_all_function_and_description, '/api/list_all_function_and_description', tags=["MlChain Core APIs"])
 
         SWAGGER_URL = 'swagger'
 

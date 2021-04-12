@@ -9,6 +9,7 @@ import numpy as np
 from PIL import Image, ImageSequence
 from .exceptions import MLChainAssertionError
 from ..config import mlconfig
+from ..context import mlchain_context
 
 cv2 = None
 ALL_LOWER_TRUE = set(["true", "yes", "yeah", "y"])
@@ -40,7 +41,7 @@ def str2ndarray(value: str) -> np.ndarray:
             from mlchain.base.utils import read_image_from_url_cv2
             return read_image_from_url_cv2(value, CV2FLAG)
         else:
-            raise MLChainAssertionError("Image url is not valid")
+            raise MLChainAssertionError("Image url is not valid. Please check the variable {0}".format(mlchain_context.CONVERT_VARIABLE))
     if os.path.exists(value):
         import_cv2()
         return cv2.imread(value)
@@ -52,7 +53,7 @@ def str2ndarray(value: str) -> np.ndarray:
         if img is not None:
             return img
         else:
-            raise MLChainAssertionError("Can't decode base64 {0} to ndarray".format(value))
+            raise MLChainAssertionError("Can't decode base64 {0} to ndarray. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
     try:
         d = json.loads(value)
@@ -78,23 +79,25 @@ def str2ndarray(value: str) -> np.ndarray:
             return arr
     except:
         raise MLChainAssertionError(
-            "There's no way to convert to numpy array with variable {}".format(value))
-    raise MLChainAssertionError("Can't convert {0} to ndarray".format(value))
+            "There's no way to convert to numpy array with variable {0}. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
+    raise MLChainAssertionError("Can't convert {0} to ndarray. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 
 def list2ndarray(value: list) -> np.ndarray:
-    raise MLChainAssertionError("Not allow multi value", code="convert")
+    raise MLChainAssertionError("Not allow multi value. Please check the variable {0}".format(mlchain_context.CONVERT_VARIABLE), code="convert")
 
 
 def str2int(value: str) -> int:
-    return int(value)
-
+    try:
+        return int(value)
+    except: 
+        raise MLChainAssertionError("Can't convert {0} to type int. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 def str2float(value: str) -> float:
     try:
         return float(value)
     except:
-        raise MLChainAssertionError("Can't convert {0} to type float".format(value))
+        raise MLChainAssertionError("Can't convert {0} to type float. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 
 def str2bool(value: str) -> bool:
@@ -102,7 +105,7 @@ def str2bool(value: str) -> bool:
         return True
     if value.lower() in ALL_LOWER_FALSE:
         return False
-    raise MLChainAssertionError("Can't convert {0} to type boolean".format(value))
+    raise MLChainAssertionError("Can't convert {0} to type boolean. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 
 def str2list(value: str) -> List:
@@ -118,7 +121,7 @@ def str2dict(value: str) -> dict:
         l = json.loads(value)
         return l
     except:
-        raise MLChainAssertionError("Can't convert {0} to dict".format(value))
+        raise MLChainAssertionError("Can't convert {0} to dict. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 
 def str2bytes(value: str) -> bytes:
@@ -131,7 +134,7 @@ def cv2imread(filename, value) -> np.ndarray:
         np.asarray(bytearray(value), dtype="uint8"),
         CV2FLAG)
     if value is None:
-        raise MLChainAssertionError("Can't read image from {0}".format(filename))
+        raise MLChainAssertionError("Can't read image from {0}. Please check the variable {1}".format(filename, mlchain_context.CONVERT_VARIABLE))
     return value
 
 
@@ -141,7 +144,7 @@ def cv2imread_to_list(filename, value) -> List[np.ndarray]:
         np.asarray(bytearray(value), dtype="uint8"),
         CV2FLAG)
     if value is None:
-        raise MLChainAssertionError("Can't read image from {0}".format(filename))
+        raise MLChainAssertionError("Can't read image from {0}. Please check the variable {1}".format(filename, mlchain_context.CONVERT_VARIABLE))
     return [value]
 
 
@@ -151,16 +154,19 @@ def pilimread_one_img(filename, img_bytes) -> np.ndarray:
 
     for i, page in enumerate(ImageSequence.Iterator(im)):
         return np.array(page)
-    raise MLChainAssertionError("Can't convert file {0} to ndarray".format(filename))
+    raise MLChainAssertionError("Can't convert file {0} to ndarray. Please check the variable {1}".format(filename, mlchain_context.CONVERT_VARIABLE))
 
 
 def pilimread_list_img(filename, img_bytes) -> List[np.ndarray]:
-    output = []
-    im = Image.open(io.BytesIO(img_bytes))
+    try:
+        output = []
+        im = Image.open(io.BytesIO(img_bytes))
 
-    for i, page in enumerate(ImageSequence.Iterator(im)):
-        output.append(np.array(page))
-    return output
+        for i, page in enumerate(ImageSequence.Iterator(im)):
+            output.append(np.array(page))
+        return output
+    except: 
+        raise MLChainAssertionError("Can't convert file {0} to List[np.ndarray]. Please check the variable {1}".format(filename, mlchain_context.CONVERT_VARIABLE))
 
 
 def storage2bytes(filename, value) -> bytes:
@@ -168,7 +174,10 @@ def storage2bytes(filename, value) -> bytes:
 
 
 def storage2json(filename, value) -> Union[List, Dict]:
-    return json.loads(value, encoding='utf-8')
+    try:
+        return json.loads(value, encoding='utf-8')
+    except: 
+        raise MLChainAssertionError("Can't convert file {0} to List or Dict. Please check the variable {1}".format(filename, mlchain_context.CONVERT_VARIABLE))
 
 
 def storage2str(filename, value) -> str:
@@ -260,7 +269,7 @@ class Converter:
             if (ext in k or '*' in k) and (out_type == o or o in out_type):
                 return converter(file_name, data)
         raise MLChainAssertionError(
-            "Not found convert file {0} to {1}".format(file_name, out_type))
+            "Not found convert file {0} to {1}. Please check the variable {2}".format(file_name, out_type, mlchain_context.CONVERT_VARIABLE))
 
     def convert(self, value, out_type):
         '''
@@ -294,7 +303,7 @@ class Converter:
                 if origin in [Set, set]:
                     return {self.convert(value, args)}
                 raise MLChainAssertionError(
-                    "Can't convert value {0} to {1}".format(value, out_type),
+                    "Can't convert value {0} to {1}. Please check the variable {2}".format(value, out_type, mlchain_context.CONVERT_VARIABLE),
                     code="convert")
         else:
             try:
@@ -325,7 +334,7 @@ class Converter:
                 else:
                     return o_type.from_json(value)
 
-        raise MLChainAssertionError("Not found converter from {0} to {1}".format(type(value), out_type))
+        raise MLChainAssertionError("Not found converter from {0} to {1}. Please check the variable {2}".format(type(value), out_type, mlchain_context.CONVERT_VARIABLE))
 
 class AsyncConverter(Converter):
     async def convert(self, value, out_type):
@@ -361,7 +370,7 @@ class AsyncConverter(Converter):
                 if origin in [Set, set]:
                     return {await self.convert(value, args)}
                 raise MLChainAssertionError(
-                    "Can't convert value {0} to {1}".format(value, out_type),
+                    "Can't convert value {0} to {1}. Please check the variable {2}".format(value, out_type, mlchain_context.CONVERT_VARIABLE),
                     code="convert")
         else:
             try:
@@ -393,7 +402,7 @@ class AsyncConverter(Converter):
                 else: 
                     return o_type.from_json(value)
 
-        raise MLChainAssertionError("Not found converter from {0} to {1}".format(type(value), out_type))
+        raise MLChainAssertionError("Not found converter from {0} to {1}. Please check the variable {2}".format(type(value), out_type, mlchain_context.CONVERT_VARIABLE))
 
 Converter.add_convert(lambda x: str(x), int, str)
 Converter.add_convert(str2ndarray)
@@ -430,7 +439,7 @@ def pilimread(filename, img_bytes) -> Image.Image:
         return im
     except Exception as e:
         raise MLChainAssertionError(
-            "Can't convert file {0} to PIL Image. Error: {1}".format(filename, e))
+            "Can't convert file {0} to PIL Image. Error: {1}. Please check the variable {2}".format(filename, e, mlchain_context.CONVERT_VARIABLE))
 
 
 def pilimread_list(filename, img_bytes) -> List[Image.Image]:
@@ -451,7 +460,7 @@ def str2pil(value: str) -> Image.Image:
         if is_image_url_and_ready(value):
             from mlchain.base.utils import read_image_from_url_pil
             return read_image_from_url_pil(value)
-        raise MLChainAssertionError("Image url is not valid")
+        raise MLChainAssertionError("Image url is not valid. Please check the variable {0}".format(mlchain_context.CONVERT_VARIABLE))
     if os.path.exists(value):
         return Image.open(open(value, 'rb'))
     if value.startswith('data:image/') and 'base64' in value:
@@ -462,7 +471,7 @@ def str2pil(value: str) -> Image.Image:
             return Image.open(data)
         except:
             raise MLChainAssertionError(
-                "Can't decode base64 {0} to PIL Image".format(value))
+                "Can't decode base64 {0} to PIL Image. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
         # If it is a base64 encoded array
     try:
@@ -477,7 +486,7 @@ def str2pil(value: str) -> Image.Image:
         return Image.fromarray(ast.literal_eval(value))
     except:
         raise MLChainAssertionError(
-            "There's no way to convert to PIL Image with variable {}".format(value))
+            "There's no way to convert to PIL Image with variable {0}. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 
 Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras',

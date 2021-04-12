@@ -27,13 +27,44 @@ class SwaggerTemplate:
             "paths": {}
         }
 
+    def add_core_endpoint(self, func, endpoint, tags=None, summary='',
+                     description='', description_output=''):
+        if not description:
+            description = getattr(func, '__doc__', None)
+        post_format = {
+            "tags": tags,
+            "summary": summary if len(summary) > 0 else description[:80].split(":")[0] if description is not None else summary,
+            "description": description,
+            "responses": {
+                "200": {
+                    "description": "OK"
+                }
+            }
+        }
+
+        if '{function_name}' in endpoint: 
+            post_format['parameters'] = [
+                {
+                    "name": "function_name",
+                    "in": "path",
+                    "description": "Function Name",
+                    "required": True,
+                    "schema": {
+                        "type": "string"
+                    }
+                }
+            ]
+
+        self.template['paths'][endpoint] = {
+            'get': post_format}
+
     def add_endpoint(self, func, endpoint, tags=None, summary='',
                      description='', description_output=''):
         if not description:
             description = getattr(func, '__doc__', None)
         post_format = {
             "tags": tags,
-            "summary": summary,
+            "summary": summary if len(summary) > 0 else description[:80].split(":")[0] if description is not None else summary,
             "description": description,
             "requestBody": {
                 "required": True,
@@ -48,11 +79,100 @@ class SwaggerTemplate:
             },
             "responses": {
                 "200": {
-                    "description": description_output,
+                    "description": description_output if len(description_output) > 0 else "The server already get the valid request",
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object"
+                                "type": "object",
+                                "properties": {
+                                    "output": {
+                                        "type": "object",
+                                        "description": "The true output of API"
+                                    },
+                                    "time": {
+                                        "type": "number",
+                                        "format": "decimal",
+                                        "description": "The processed time"
+                                    },
+                                    "api_version": {
+                                        "type": "string",
+                                        "description": "The version of API"
+                                    },
+                                    "mlchain_version": {
+                                        "type": "string",
+                                        "description": "The version of Mlchain"
+                                    },
+                                    "request_id": {
+                                        "type": "string",
+                                        "description": "The ID of request to trace"
+                                    },
+                                }
+                            }
+                        }
+                    }
+                },
+                "500": {
+                    "description": "The server has error with this request",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "error": {
+                                        "type": "object",
+                                        "description": "The detail error"
+                                    },
+                                    "time": {
+                                        "type": "number",
+                                        "format": "decimal",
+                                        "description": "The processed time"
+                                    },
+                                    "api_version": {
+                                        "type": "string",
+                                        "description": "The version of API"
+                                    },
+                                    "mlchain_version": {
+                                        "type": "string",
+                                        "description": "The version of Mlchain"
+                                    },
+                                    "request_id": {
+                                        "type": "string",
+                                        "description": "The ID of request to trace"
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }, 
+                "422": {
+                    "description": "The input is not valid, please check!",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "error": {
+                                        "type": "string",
+                                        "description": "The detail error"
+                                    },
+                                    "time": {
+                                        "type": "number",
+                                        "format": "decimal",
+                                        "description": "The processed time"
+                                    },
+                                    "api_version": {
+                                        "type": "string",
+                                        "description": "The version of API"
+                                    },
+                                    "mlchain_version": {
+                                        "type": "string",
+                                        "description": "The version of Mlchain"
+                                    },
+                                    "request_id": {
+                                        "type": "string",
+                                        "description": "The ID of request to trace"
+                                    },
+                                }
                             }
                         }
                     }
