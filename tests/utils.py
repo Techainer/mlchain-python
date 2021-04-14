@@ -7,7 +7,8 @@ from signal import SIGINT
 from threading import Timer
 from time import sleep
 
-multiprocessing.set_start_method("fork")
+if os.name != 'nt':
+    multiprocessing.set_start_method("fork")
 
 logger = logging.getLogger()
 
