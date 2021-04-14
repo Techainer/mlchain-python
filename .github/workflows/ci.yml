@@ -31,7 +31,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Set up conda
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.6' }}
+        # if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.6' }}
         uses: s-weigand/setup-conda@v1
         with:
           python-version: ${{ matrix.python-version}}
@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip3 install -U scikit-build
-          pip3 install -U awscli pip pytest coverage codecov attrs
+          pip3 install -U awscli pip pytest coverage codecov
 
       - name: Build and install
         run: python3 setup.py install
