@@ -31,25 +31,25 @@ jobs:
       script:
         - pylint --output-format=text $(git ls-files '*.py') || pylint-exit $? 
 
-    # - stage: build
-    #   install:
-    #     - pip3 install -U scikit-build awscli pip
-    #     - pip3 install -U -r requirements.txt
-    #   script:
-    #     - python3 setup.py bdist_wheel
-    #     - python3 setup.py install
+    - stage: build
+      install:
+        - pip3 install -U scikit-build awscli pip
+        - pip3 install -U -r requirements.txt
+      script:
+        - python3 setup.py bdist_wheel
+        - python3 setup.py install
 
-    # - stage: test
-    #   install:
-    #     - pip3 install -U scikit-build pytest coverage codecov pip
-    #     - pip3 install -U attrs
-    #   script:
-    #     - pip3 install .
-    #     - python3 -m coverage run --source=. -m unittest discover
-    #     - python3 -m coverage combine
-    #     - python3 -m coverage report
-    #   after_success:
-    #     - codecov
+    - stage: test
+      install:
+        - pip3 install -U scikit-build pytest coverage codecov pip
+        - pip3 install -U attrs
+      script:
+        - pip3 install .
+        - python3 -m coverage run --source=. -m unittest discover
+        - python3 -m coverage combine
+        - python3 -m coverage report
+      after_success:
+        - codecov
 
     # - stage: deploy
     #   if: tag IS present
