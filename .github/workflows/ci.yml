@@ -42,9 +42,7 @@ jobs:
           pip3 install -U awscli pip pytest coverage codecov attrs
 
       - name: Build and install
-        run: |
-          python3 setup.py bdist_wheel
-          python3 setup.py install
+        run: python3 setup.py install
 
       - name: Run unittest
         run: |
