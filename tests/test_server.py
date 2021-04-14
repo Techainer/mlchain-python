@@ -17,6 +17,7 @@ from mlchain.server.grpc_server import GrpcServer
 from mlchain.server.starlette_server import StarletteServer
 from mlchain.decorators import except_serving
 from mlchain.base.serve_model import batch,non_thread
+from .utils import test_breaking_process_server
 
 logger = logging.getLogger()
 
@@ -54,20 +55,6 @@ class Model():
 
 original_model = Model()
 
-def test_breaking_process(runner, port, wait_time=10):
-    from multiprocessing import Process
-    from threading import Timer
-    from os import kill, getpid
-    from signal import SIGINT
-
-    def background():
-        Timer(wait_time, lambda: kill(getpid(), SIGINT)).start()
-        runner.run(port=port, thread=1)
-
-    p = Process(target=background)
-    p.start()
-
-
 class TestServer(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
@@ -84,21 +71,21 @@ class TestServer(unittest.TestCase):
         model = ServeModel(original_model)
         flask_model = FlaskServer(model)
         if self.is_not_windows:
-            test_breaking_process(flask_model, port=10001)
+            test_breaking_process_server(flask_model, port=10001)
     
     def test_starlette_server_init(self):
         logger.info("Running starllete server init test")
         model = ServeModel(original_model)
         starlette_model = StarletteServer(model)
         if self.is_not_windows:
-            test_breaking_process(starlette_model, port=10002)
+            test_breaking_process_server(starlette_model, port=10002)
 
     def test_grpc_server_init(self):
         logger.info("Running grpc server init test")
         model = ServeModel(original_model)
         grpc_model = GrpcServer(model)
         # if self.is_not_windows:
-        #     test_breaking_process(grpc_model, port=10003)
+        #     test_breaking_process_server(grpc_model, port=10003)
 
 
 if __name__ == "__main__":
