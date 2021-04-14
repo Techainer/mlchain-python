@@ -3,7 +3,7 @@ name: Release PyPI
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "*.*.*"
 
 jobs:
   # This workflow contains a single job called "build"
