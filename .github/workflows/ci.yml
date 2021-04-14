@@ -36,7 +36,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version}}
 
-
       - name: Install dependencies
         run: |
           pip3 install -U scikit-build
