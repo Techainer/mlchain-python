@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+import pkg_resources
+import setuptools
+import pathlib
 import os
 from setuptools import setup, find_packages
 __version__ = "0.2.0"
@@ -9,12 +12,13 @@ def readme():
     with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
         return f.read()
 
-def parse_requirements(filename):
-    """ load requirements from a pip requirements file """
-    lineiter = (line.strip() for line in open(filename))
-    return [line for line in lineiter if line and not line.startswith("#")]
 
-install_requires = parse_requirements('requirements.txt')
+with pathlib.Path('requirements.txt').open() as requirements_txt:
+    install_requires = [
+        str(requirement)
+        for requirement
+        in pkg_resources.parse_requirements(requirements_txt)
+    ]
 
 setup(
     name=project,
