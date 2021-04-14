@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+
+    if: "!contains(github.event.head_commit.message, 'ci skip')"
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip3 install -U scikit-build
+          pip3 install -U awscli pip pytest coverage codecov attrs
+
+      - name: Build and install
+        run: |
+          python3 setup.py bdist_wheel
+          python3 setup.py install
+
+      - name: Run unittest
+        run: |
+          python3 -m coverage run --source=. -m unittest discover
+          python3 -m coverage combine
+          python3 -m coverage report
+      
+      - name: Upload coverage report
+        run: codecov
