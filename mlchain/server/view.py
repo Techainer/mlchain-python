@@ -91,9 +91,9 @@ class View:
         return self.call_function(function_name=function_name, **kwargs)
 
     def call_function(self, function_name, **kws):
-        with push_scope() as scope:
+        with push_scope() as sentry_scope:
             transaction_name = "{0}  ||  {1}".format(mlconfig.MLCHAIN_SERVER_NAME, function_name)
-            scope.transaction = transaction_name
+            sentry_scope.transaction = transaction_name
             
             with start_transaction(op="task", name=transaction_name):
                 uid = self.init_context()
@@ -121,7 +121,7 @@ class View:
                     kwargs = self.server._normalize_kwargs_to_valid_format(kwargs, func)
 
                     uid = self.init_context_with_headers(headers, uid)
-                    scope.set_tag("transaction_id", uid)
+                    sentry_scope.set_tag("transaction_id", uid)
                     logger.debug("Mlchain transaction id: {0}".format(uid))
 
                     output = self.server.model.call_function(function_name, uid, **kwargs)
@@ -146,6 +146,8 @@ class StarletteAsyncView(View):
 
         self.mlchain_format = AsyncMLchainFormat()
         self.formats = [self.mlchain_format]
+        if isinstance(formatter, BaseFormat):
+            self.formats.insert(0, formatter)
 
     async def parse_data(self):
         return super().parse_data()
@@ -159,9 +161,10 @@ class StarletteAsyncView(View):
         return await self.call_function(function_name, request, scope, receive, send, **kwargs)
         
     async def call_function(self, function_name, request, scope, receive, send, **kws):
-        with push_scope() as scope:
+        function_name = function_name.strip("/")
+        with push_scope() as sentry_scope:
             transaction_name = "{0}  ||  {1}".format(mlconfig.MLCHAIN_SERVER_NAME, function_name)
-            scope.transaction = transaction_name
+            sentry_scope.transaction = transaction_name
             
             with start_transaction(op="task", name=transaction_name):
                 uid = self.init_context()
@@ -192,7 +195,7 @@ class StarletteAsyncView(View):
                     kwargs = self.server.get_kwargs(func, *args, **kwargs)
                     kwargs = await self.server._normalize_kwargs_to_valid_format(kwargs, func)
                     uid = self.init_context_with_headers(headers, uid)
-                    scope.set_tag("transaction_id", uid)
+                    sentry_scope.set_tag("transaction_id", uid)
                     logger.debug("Mlchain transaction id: {0}".format(uid))
 
                     output = await self.server.model.call_async_function(function_name, uid, **kwargs)

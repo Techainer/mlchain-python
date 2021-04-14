@@ -17,6 +17,10 @@ from .autofrontend import register_autofrontend
 from .base import MLServer, Converter, RawResponse, FileResponse, TemplateResponse
 from .format import RawFormat
 from .view import View
+from mlchain import mlchain_context
+from sentry_sdk import push_scope, start_transaction
+from mlchain import mlconfig
+from uuid import uuid4
 
 APP_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(APP_PATH, 'server/templates')
@@ -68,6 +72,11 @@ class FlaskEndpointAction:
         return Response(output_encoded, mimetype='application/msgpack_blosc',
                         status=status)
 
+    def init_context(self): 
+        uid = str(uuid4())
+        mlchain_context['MLCHAIN_CONTEXT_ID'] = uid
+        return uid 
+
     def __call__(self, *args, **kwargs):
         """
         Standard method that effectively perform the stored action of this endpoint.
@@ -77,101 +86,115 @@ class FlaskEndpointAction:
         """
         start_time = time.time()
 
-        # If data POST is in msgpack format
-        serializer = self.serializers_dict.get(
-            request.content_type,
-            self.serializers_dict[request.headers.get('serializer', 'application/json')]
-        )
-        if request.content_type == 'application/msgpack':
-            response_function = self.__get_msgpack_response
-        elif request.content_type == 'application/msgpack_blosc':
-            response_function = self.__get_msgpack_blosc_response
-        else:
-            response_function = self.__get_json_response
-        if request.method == 'POST' and self.api_keys is not None or (
-                isinstance(self.api_keys, (list, dict)) and len(self.api_keys) > 0):
-            authorized = False
-            has_key = False
-            for key in ['x-api-key', 'apikey', 'apiKey', 'api-key']:
-                apikey = request.headers.get(key, '')
-                if apikey != '':
-                    has_key = True
-                if apikey in self.api_keys:
-                    authorized = True
-                    break
-            if not authorized:
-                if has_key:
-                    error = 'Unauthorized. Api-key incorrect.'
+        with push_scope() as sentry_scope:
+            transaction_name = "{0}  ||  {1}".format(mlconfig.MLCHAIN_SERVER_NAME, self.action.__name__)
+            sentry_scope.transaction = transaction_name
+            
+            with start_transaction(op="task", name=transaction_name):
+                uid = self.init_context()
+
+                # If data POST is in msgpack format
+                serializer = self.serializers_dict.get(
+                    request.content_type,
+                    self.serializers_dict[request.headers.get('serializer', 'application/json')]
+                )
+                if request.content_type == 'application/msgpack':
+                    response_function = self.__get_msgpack_response
+                elif request.content_type == 'application/msgpack_blosc':
+                    response_function = self.__get_msgpack_blosc_response
                 else:
-                    error = 'Unauthorized. Lack of x-api-key or apikey or api-key in headers.'
-                output = {
-                    'error': error,
-                    'api_version': self.version,
-                    'mlchain_version': mlchain.__version__
-                }
-                return response_function(output, 401)
-        try:
-            # Perform the action
-            if request.method == 'POST':
-                output = self.action(*args, **kwargs, serializer=serializer)
-            else:
-                output = self.action(*args, **kwargs)
-            if isinstance(output, RawResponse):
-                output = Response(output.response, status=output.status,
-                                  headers=output.headers,
-                                  mimetype=output.mimetype,
-                                  content_type=output.content_type)
-                output.headers['mlchain_version'] = mlchain.__version__
-                output.headers['api_version'] = self.version
-                return output
-            if isinstance(output, FileResponse):
-                file = send_file(output.path, mimetype=output.mimetype)
-                for k, v in output.headers.items():
-                    file.headers[k] = v
-                file.headers['mlchain_version'] = mlchain.__version__
-                file.headers['api_version'] = self.version
-                return file
-            if isinstance(output, Response):
-                return output
+                    response_function = self.__get_json_response
+                if request.method == 'POST' and self.api_keys is not None or (
+                        isinstance(self.api_keys, (list, dict)) and len(self.api_keys) > 0):
+                    authorized = False
+                    has_key = False
+                    for key in ['x-api-key', 'apikey', 'apiKey', 'api-key']:
+                        apikey = request.headers.get(key, '')
+                        if apikey != '':
+                            has_key = True
+                        if apikey in self.api_keys:
+                            authorized = True
+                            break
+                    if not authorized:
+                        if has_key:
+                            error = 'Unauthorized. Api-key incorrect.'
+                        else:
+                            error = 'Unauthorized. Lack of x-api-key or apikey or api-key in headers.'
+                        output = {
+                            'error': error,
+                            'api_version': self.version,
+                            'mlchain_version': mlchain.__version__,
+                            "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                        }
+                        return response_function(output, 401)
+                try:
+                    # Perform the action
+                    if request.method == 'POST':
+                        output = self.action(*args, **kwargs, serializer=serializer)
+                    else:
+                        output = self.action(*args, **kwargs)
+                    if isinstance(output, RawResponse):
+                        output = Response(output.response, status=output.status,
+                                        headers=output.headers,
+                                        mimetype=output.mimetype,
+                                        content_type=output.content_type)
+                        output.headers['mlchain_version'] = mlchain.__version__
+                        output.headers['api_version'] = self.version
+                        output.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
+                        return output
+                    if isinstance(output, FileResponse):
+                        file = send_file(output.path, mimetype=output.mimetype)
+                        for k, v in output.headers.items():
+                            file.headers[k] = v
+                        file.headers['mlchain_version'] = mlchain.__version__
+                        file.headers['api_version'] = self.version
+                        file.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
+                        return file
+                    if isinstance(output, Response):
+                        return output
 
-            output = {
-                'output': output,
-                'time': round(time.time() - start_time, 2),
-                'api_version': self.version,
-                'mlchain_version': mlchain.__version__
-            }
-            return response_function(output, 200)
-        except MlChainError as ex:
-            err = ex.msg
+                    output = {
+                        'output': output,
+                        'time': round(time.time() - start_time, 2),
+                        'api_version': self.version,
+                        'mlchain_version': mlchain.__version__,
+                        "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                    }
+                    return response_function(output, 200)
+                except MlChainError as ex:
+                    err = ex.msg
 
-            output = {
-                'error': err,
-                'time': round(time.time() - start_time, 2),
-                'code': ex.code,
-                'api_version': self.version,
-                'mlchain_version': mlchain.__version__
-            }
-            return response_function(output, ex.status_code)
-        except AssertionError as ex:
-            err = str(ex)
+                    output = {
+                        'error': err,
+                        'time': round(time.time() - start_time, 2),
+                        'code': ex.code,
+                        'api_version': self.version,
+                        'mlchain_version': mlchain.__version__,
+                        "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                    }
+                    return response_function(output, ex.status_code)
+                except AssertionError as ex:
+                    err = str(ex)
 
-            output = {
-                'error': err,
-                'time': round(time.time() - start_time, 2),
-                'api_version': self.version,
-                'mlchain_version': mlchain.__version__
-            }
-            return response_function(output, 422)
-        except Exception:
-            err = format_exc(name='mlchain.serve.server', return_str=False)
+                    output = {
+                        'error': err,
+                        'time': round(time.time() - start_time, 2),
+                        'api_version': self.version,
+                        'mlchain_version': mlchain.__version__,
+                        "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                    }
+                    return response_function(output, 422)
+                except Exception:
+                    err = format_exc(name='mlchain.serve.server', return_str=False)
 
-            output = {
-                'error': err,
-                'time': round(time.time() - start_time, 2),
-                'api_version': self.version,
-                'mlchain_version': mlchain.__version__
-            }
-            return response_function(output, 500)
+                    output = {
+                        'error': err,
+                        'time': round(time.time() - start_time, 2),
+                        'api_version': self.version,
+                        'mlchain_version': mlchain.__version__,
+                        "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                    }
+                    return response_function(output, 500)
 
 
 class FlaskView(View):
@@ -199,6 +222,7 @@ class FlaskView(View):
                               content_type=response.content_type)
             output.headers['mlchain_version'] = mlchain.__version__
             output.headers['api_version'] = self.server.version
+            output.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
             return output
             
         if isinstance(response, FileResponse):
@@ -207,6 +231,7 @@ class FlaskView(View):
                 file.headers[k] = v
             file.headers['mlchain_version'] = mlchain.__version__
             file.headers['api_version'] = self.server.version
+            file.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
             return file
 
         if isinstance(response, TemplateResponse):
@@ -228,6 +253,8 @@ class FlaskServer(MLServer):
         self.app = Flask(self.name, static_folder=static_folder,
                          template_folder=template_folder,
                          static_url_path=static_url_path)
+
+        self.app.url_map.strict_slashes = False
         self.app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
         self.app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
@@ -274,7 +301,15 @@ class FlaskServer(MLServer):
                                            description=self.model.model.__doc__,
                                            version=self.model.name)
         for name, func in self.model.get_all_func().items():
-            swagger_template.add_endpoint(func, f'/call/{name}', tags=[self.name])
+            swagger_template.add_endpoint(func, f'/call/{name}', tags=["MlChain Format APIs"])
+            swagger_template.add_endpoint(func, f'/call_raw/{name}', tags=["MlChain Raw Output APIs"])
+
+        swagger_template.add_core_endpoint(self.model._get_parameters_of_func, '/api/get_params/{function_name}', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._get_description_of_func, '/api/des_func/{function_name}', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self._check_status, '/api/ping', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._get_all_description, '/api/description', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._list_all_function, '/api/list_all_function', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._list_all_function_and_description, '/api/list_all_function_and_description', tags=["MlChain Core APIs"])
 
         SWAGGER_URL = '/swagger'
 

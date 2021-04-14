@@ -10,6 +10,7 @@ from mlchain.base.serializer import JsonSerializer, MsgpackSerializer, MsgpackBl
 from mlchain.base.converter import Converter, AsyncConverter
 from mlchain.base.exceptions import MLChainAssertionError
 import numpy as np 
+from mlchain import mlchain_context
 
 class MLChainResponse:
     '''
@@ -154,10 +155,10 @@ class MLServer:
         """
         Initialize Server Endpoint
         """
-        self.add_endpoint('/api/get_params_<function_name>',
+        self.add_endpoint('/api/get_params/<function_name>',
                            '_get_parameters_of_func',
                            handler=self.model._get_parameters_of_func, methods=['GET'])
-        self.add_endpoint('/api/des_func_<function_name>',
+        self.add_endpoint('/api/des_func/<function_name>',
                            '_get_description_of_func',
                            handler=self.model._get_description_of_func, methods=['GET'])
         self.add_endpoint('/api/ping',
@@ -173,6 +174,7 @@ class MLServer:
                            '_list_all_function_and_description',
                            handler=self.model._list_all_function_and_description, methods=['GET'])
 
+        
         self._register_home()
 
         try:
@@ -181,6 +183,11 @@ class MLServer:
             logger.error("Can't register swagger with error {0}".format(ex))
 
     def convert(self, value, out_type):
+        """
+        Convert the value in to out_type
+        :value: The value
+        :out_type: Expected type
+        """
         return self.converter.convert(value, out_type)
 
     def _normalize_kwargs_to_valid_format(self, kwargs, func_):
@@ -193,6 +200,7 @@ class MLServer:
 
         # Check valid parameters
         for key, value in list(kwargs.items()):
+            mlchain_context['CONVERT_VARIABLE'] = key
             if key in inspect_func_.parameters:
                 req_type = inspect_func_.parameters[key].annotation
                 the_default = inspect_func_.parameters[key].default
@@ -246,6 +254,7 @@ class AsyncMLServer(MLServer):
 
         # Check valid parameters
         for key, value in list(kwargs.items()):
+            mlchain_context['CONVERT_VARIABLE'] = key
             if key in inspect_func_.parameters:
                 req_type = inspect_func_.parameters[key].annotation
                 the_default = inspect_func_.parameters[key].default

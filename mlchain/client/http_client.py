@@ -5,6 +5,20 @@ from mlchain.storage import Path
 from mlchain.base.log import except_handler, logger
 from mlchain.server.base import RawResponse, JsonResponse
 from .base import MLClient
+from mlchain.base.exceptions import MlChainError
+
+HTTP_ERROR_CODE = {
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    407: "Proxy Authentication Required",
+    413: "Payload Too Large",
+    429: "Too Many Requests",
+    431: "Request Header Fields Too Large",
+    502: "Bad Gateway",
+    504: "Gateway Timeout",
+    511: "Network Authentication Required"
+}
 
 class HttpClient(MLClient):
     def __init__(self, api_key=None, api_address=None, serializer='msgpack',
@@ -86,9 +100,19 @@ class HttpClient(MLClient):
             **headers
         }
 
-        with httpx.Client(timeout=timeout or self.timeout) as client:
+        with httpx.Client(timeout=timeout or self.timeout, verify=False) as client:
             output = client.get("{0}/api/{1}".format(self.api_address, api_name),
                                 headers=headers)
+            if output.status_code != 200:
+                if output.status_code == 500:
+                    raise MlChainError(msg="Client call into Server {0}. But function {1} raised an error. GET".format(
+                        self.api_address, api_name), status_code=500)
+                else:
+                    error_code = HTTP_ERROR_CODE.get(output.status_code, None)
+                    if error_code is not None:
+                        raise MlChainError(msg="Client call into Server {0}. But function {1} receive this error code {2}: {3}. GET".format(
+                            self.api_address, api_name, output.status_code, error_code), status_code=output.status_code)
+
 
         if not self.check_response_ok(output):
             return self.__format_error(output)
@@ -122,7 +146,7 @@ class HttpClient(MLClient):
                                           'application/octet-stream')))
                 kwargs[key] = file_name
 
-        with httpx.Client(timeout=self.timeout) as client:
+        with httpx.Client(timeout=self.timeout, verify=False) as client:
             input_encoded = self.serializer.encode((args, kwargs))
             files.append(("__parameters__", ('parameters', BytesIO(input_encoded),
                                              'application/octet-stream')))
@@ -133,6 +157,15 @@ class HttpClient(MLClient):
             output = client.post("{0}/call/{1}".format(self.api_address, function_name),
                                  headers=headers,
                                  files=files)
+            if output.status_code != 200:
+                if output.status_code == 500:
+                    raise MlChainError(msg="Client call into Server {0}. But function {1} raised an error. POST".format(
+                        self.api_address, function_name), status_code=500)
+                else:
+                    error_code = HTTP_ERROR_CODE.get(output.status_code, None)
+                    if error_code is not None:
+                        raise MlChainError(msg="Client call into Server {0}. But function {1} receive this error code {2}: {3}. POST".format(
+                            self.api_address, function_name, output.status_code, error_code), status_code=output.status_code)
 
         if 'response-type' in output.headers:
             response_type = output.headers.get('response-type', 'mlchain/raw')

@@ -24,11 +24,15 @@ from .swagger import SwaggerTemplate
 from .view import StarletteAsyncView
 from .autofrontend import register_autofrontend
 from starlette.datastructures import UploadFile
-
+from mlchain import mlchain_context
 from starlette.responses import FileResponse as StarletteFileResponse
+from sentry_sdk import push_scope, start_transaction
+from mlchain import mlconfig
+from uuid import uuid4
 
 APP_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(APP_PATH, 'server/templates')
+SWAGGER_PATH = os.path.join(TEMPLATE_PATH, 'swaggerui')
 STATIC_PATH = os.path.join(APP_PATH, 'server/static')
 
 class StarletteEndpointAction:
@@ -52,26 +56,31 @@ class StarletteEndpointAction:
         self.msgpack_blosc_serializer = self.serializers_dict['application/msgpack_blosc']
         self.api_keys = api_keys
 
-    async def __get_json_response(self, output, status=200):
+    def __get_json_response(self, output, status=200):
         """
         Get JSON Reponse
         """
         output_encoded = self.json_serializer.encode(output)
         return Response(output_encoded, media_type='application/json', status_code=status)
 
-    async def __get_msgpack_response(self, output, status=200):
+    def __get_msgpack_response(self, output, status=200):
         """
         Get msgpack Reponse
         """
         output_encoded = self.msgpack_serializer.encode(output)
         return Response(output_encoded, media_type='application/msgpack', status_code=status)
 
-    async def __get_msgpack_blosc_response(self, output, status=200):
+    def __get_msgpack_blosc_response(self, output, status=200):
         """
         Get msgpack blosc response
         """
         output_encoded = self.msgpack_blosc_serializer.encode(output)
         return Response(output_encoded, media_type='application/msgpack_blosc', status_code=status)
+
+    def init_context(self): 
+        uid = str(uuid4())
+        mlchain_context['MLCHAIN_CONTEXT_ID'] = uid
+        return uid 
 
     async def __call__(self, scope, receive, send, *args, **kwargs): 
         """
@@ -80,126 +89,141 @@ class StarletteEndpointAction:
         :param kwargs: Keywords Arguments to give to the stored function
         :return: The response, which is a jsonified version of the function returned value
         """
-        request = Request(scope, receive)
-
         start_time = time.time()
 
-        # If data POST is in msgpack format
-        content_type = request.content_type
-        if content_type not in self.serializers_dict:
-            headers = {k.upper(): v for k, v in request.headers.items()}
-            'SERIALIZER'
-            if 'SERIALIZER'.upper() in headers:
-                content_type = headers['SERIALIZER']
-            else:
-                content_type = 'application/json'
+        with push_scope() as sentry_scope:
+            transaction_name = "{0}  ||  {1}".format(mlconfig.MLCHAIN_SERVER_NAME, self.action.__name__)
+            sentry_scope.transaction = transaction_name
+            
+            with start_transaction(op="task", name=transaction_name):
+                uid = self.init_context()
 
-        serializer = self.serializers_dict.get(content_type,
-                                               self.serializers_dict['application/json'])
-        if content_type == 'application/msgpack':
-            response_function = self.__get_msgpack_response
-        elif content_type == 'application/msgpack_blosc':
-            response_function = self.__get_msgpack_blosc_response
-        else:
-            response_function = self.__get_json_response
-        if request.method == 'POST' and self.api_keys is not None or (
-                isinstance(self.api_keys, (list, dict)) and len(self.api_keys) > 0):
-            authorized = False
-            has_key = False
-            for key in ['x-api-key', 'apikey', 'apiKey', 'api-key']:
-                apikey = request.headers.get(key, '')
-                if apikey != '':
-                    has_key = True
-                if apikey in self.api_keys:
-                    authorized = True
-                    break
-            if not authorized:
-                if has_key:
-                    error = 'Unauthorized. Api-key incorrect.'
+                request = Request(scope, receive)
+                kwargs.update(request.path_params)
+
+                # If data POST is in msgpack format
+                content_type = request.headers.get('content-type', 'application/json')
+                if content_type not in self.serializers_dict:
+                    headers = {k.upper(): v for k, v in request.headers.items()}
+
+                    if 'SERIALIZER'.upper() in headers:
+                        content_type = headers['SERIALIZER']
+                    else:
+                        content_type = 'application/json'
+
+                serializer = self.serializers_dict.get(content_type,
+                                                    self.serializers_dict['application/json'])
+                if content_type == 'application/msgpack':
+                    response_function = self.__get_msgpack_response
+                elif content_type == 'application/msgpack_blosc':
+                    response_function = self.__get_msgpack_blosc_response
                 else:
-                    error = 'Unauthorized. Lack of x-api-key or apikey or api-key in headers.'
-                output = {
-                    'error': error,
-                    'api_version': self.version,
-                    'mlchain_version': mlchain.__version__
-                }
-                return await response_function(output, 401)
-        try:
-            # Perform the action
-            if inspect.iscoroutinefunction(self.action) \
-                    or (not inspect.isfunction(self.action)
-                        and hasattr(self.action, '__call__')
-                        and inspect.iscoroutinefunction(self.action.__call__)):
-                if request.method == 'POST':
-                    output = await self.action(*args, **kwargs, serializer=serializer)
-                else:
-                    output = await self.action(*args, **kwargs)
-            else:
-                if request.method == 'POST':
-                    output = self.action(*args, **kwargs, serializer=serializer)
-                else:
-                    output = self.action(*args, **kwargs)
+                    response_function = self.__get_json_response
+                if request.method == 'POST' and self.api_keys is not None or (
+                        isinstance(self.api_keys, (list, dict)) and len(self.api_keys) > 0):
+                    authorized = False
+                    has_key = False
+                    for key in ['x-api-key', 'apikey', 'apiKey', 'api-key']:
+                        apikey = request.headers.get(key, '')
+                        if apikey != '':
+                            has_key = True
+                        if apikey in self.api_keys:
+                            authorized = True
+                            break
+                    if not authorized:
+                        if has_key:
+                            error = 'Unauthorized. Api-key incorrect.'
+                        else:
+                            error = 'Unauthorized. Lack of x-api-key or apikey or api-key in headers.'
+                        output = {
+                            'error': error,
+                            'api_version': self.version,
+                            'mlchain_version': mlchain.__version__,
+                            "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                        }
+                        return await response_function(output, 401)(scope, receive, send)
+                try:
+                    # Perform the action
+                    if inspect.iscoroutinefunction(self.action) \
+                            or (not inspect.isfunction(self.action)
+                                and hasattr(self.action, '__call__')
+                                and inspect.iscoroutinefunction(self.action.__call__)):
+                        if request.method == 'POST':
+                            output = await self.action(*args, **kwargs, serializer=serializer)
+                        else:
+                            output = await self.action(*args, **kwargs)
+                    else:
+                        if request.method == 'POST':
+                            output = self.action(*args, **kwargs, serializer=serializer)
+                        else:
+                            output = self.action(*args, **kwargs)
 
-            if isinstance(output, RawResponse):
-                output = Response(output.response, status_code=output.status,
-                                  headers=output.headers,
-                                  media_type=output.mimetype,
-                                  content_type=output.content_type)
-                output.headers['mlchain_version'] = mlchain.__version__
-                output.headers['api_version'] = self.version
-                return output
+                    if isinstance(output, RawResponse):
+                        output = Response(output.response, status_code=output.status,
+                                        headers=output.headers,
+                                        media_type=output.mimetype,
+                                        content_type=output.content_type)
+                        output.headers['mlchain_version'] = mlchain.__version__
+                        output.headers['api_version'] = self.version
+                        output.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
+                        return await output(scope, receive, send)
 
-            if isinstance(output, FileResponse):
-                file = await send_file(output.path)
-                for k, v in output.headers.items():
-                    file.headers[k] = v
-                file.headers['mlchain_version'] = mlchain.__version__
-                file.headers['api_version'] = self.version
-                return file
+                    if isinstance(output, FileResponse):
+                        file = await StarletteFileResponse(output.path)
+                        for k, v in output.headers.items():
+                            file.headers[k] = v
+                        file.headers['mlchain_version'] = mlchain.__version__
+                        file.headers['api_version'] = self.version
+                        file.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
+                        return await file(scope, receive, send)
 
-            if isinstance(output, Response):
-                return output
+                    if isinstance(output, Response):
+                        return await output(scope, receive, send)
 
-            output = {
-                'output': output,
-                'time': round(time.time() - start_time, 2),
-                'api_version': self.version,
-                'mlchain_version': mlchain.__version__
-            }
+                    output = {
+                        'output': output,
+                        'time': round(time.time() - start_time, 2),
+                        'api_version': self.version,
+                        'mlchain_version': mlchain.__version__,
+                        "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                    }
+                    
+                    return await response_function(output, 200)(scope, receive, send)
+                except MlChainError as ex:
+                    err = ex.msg
+                    # logger.error("code: {0} msg: {1}".format(ex.code, ex.msg))
 
-            return await response_function(output, 200)
-        except MlChainError as ex:
-            err = ex.msg
-            # logger.error("code: {0} msg: {1}".format(ex.code, ex.msg))
+                    output = {
+                        'error': err,
+                        'time': round(time.time() - start_time, 2),
+                        'code': ex.code,
+                        'api_version': self.version,
+                        'mlchain_version': mlchain.__version__,
+                        "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                    }
+                    return await response_function(output, ex.status_code)(scope, receive, send)
+                except AssertionError as ex:
+                    err = str(ex)
 
-            output = {
-                'error': err,
-                'time': round(time.time() - start_time, 2),
-                'code': ex.code,
-                'api_version': self.version,
-                'mlchain_version': mlchain.__version__
-            }
-            return await response_function(output, ex.status_code)
-        except AssertionError as ex:
-            err = str(ex)
+                    output = {
+                        'error': err,
+                        'time': round(time.time() - start_time, 2),
+                        'api_version': self.version,
+                        'mlchain_version': mlchain.__version__,
+                        "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                    }
+                    return await response_function(output, 422)(scope, receive, send)
+                except Exception as ex:
+                    err = format_exc(name='mlchain.serve.server')
 
-            output = {
-                'error': err,
-                'time': round(time.time() - start_time, 2),
-                'api_version': self.version,
-                'mlchain_version': mlchain.__version__
-            }
-            return await response_function(output, 422)
-        except Exception as ex:
-            err = format_exc(name='mlchain.serve.server')
-
-            output = {
-                'error': err,
-                'time': round(time.time() - start_time, 2),
-                'api_version': self.version,
-                'mlchain_version': mlchain.__version__
-            }
-            return await response_function(output, 500)
+                    output = {
+                        'error': err,
+                        'time': round(time.time() - start_time, 2),
+                        'api_version': self.version,
+                        'mlchain_version': mlchain.__version__,
+                        "request_id": mlchain_context.MLCHAIN_CONTEXT_ID
+                    }
+                    return await response_function(output, 500)(scope, receive, send)
 
 
 class StarletteView(StarletteAsyncView):
@@ -212,7 +236,10 @@ class StarletteView(StarletteAsyncView):
         form = defaultdict(list)
 
         # Parse form and files
-        temp = await request.form()
+        try:
+            temp = await request.form()
+        except:
+            temp = {}
 
         for k, v in temp.items():
             if isinstance(v, UploadFile):
@@ -240,14 +267,16 @@ class StarletteView(StarletteAsyncView):
                               media_type=response.content_type)
             output.headers['mlchain_version'] = mlchain.__version__
             output.headers['api_version'] = self.server.version
+            output.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
             return await output(scope, receive, send)
 
         if isinstance(response, FileResponse):
-            file = FileResponse(response.path)
+            file = StarletteFileResponse(response.path)
             for k, v in response.headers.items():
                 file.headers[k] = v
             file.headers['mlchain_version'] = mlchain.__version__
             file.headers['api_version'] = self.server.version
+            file.headers['request_id'] = mlchain_context.MLCHAIN_CONTEXT_ID
             return await file(scope, receive, send)
 
         if isinstance(response, TemplateResponse):
@@ -275,7 +304,7 @@ class StarletteServer(AsyncMLServer):
                     Route('/{function_name:path}', StarletteView(self, self.api_format, self.authentication), methods=['POST', 'GET'], name="call")
                 ]),
                 Mount('/call_raw', routes=[
-                    Route('/{function_name}/?', StarletteView(self, api_format, self.authentication), methods=['POST', 'GET'], name="call_raw")
+                    Route('/{function_name:path}', StarletteView(self, RawFormat(), self.authentication), methods=['POST', 'GET'], name="call_raw")
                 ]),
             ],
         )
@@ -304,6 +333,11 @@ class StarletteServer(AsyncMLServer):
         return await storage.read()
 
     async def convert(self, value, out_type):
+        """
+        Convert the value in to out_type
+        :value: The value
+        :out_type: Expected type
+        """
         return await self.converter.convert(value, out_type)
         
     def _add_endpoint(self, endpoint=None, endpoint_name=None,
@@ -315,7 +349,7 @@ class StarletteServer(AsyncMLServer):
         :param handler: function to execute on call on the URL
         :return: Nothing
         """
-        self.app.add_route(path=endpoint, name=endpoint_name,
+        self.app.add_route(path=endpoint.replace("<", "{").replace(">", "}").replace("{function_name}", "{function_name:path}"), name=endpoint_name,
                               route=StarletteEndpointAction(handler,
                                                   self.serializers_dict,
                                                   version=self.version,
@@ -329,24 +363,35 @@ class StarletteServer(AsyncMLServer):
                                            description=self.model.model.__doc__,
                                            version=self.model.name)
         for name, func in self.model.get_all_func().items():
-            swagger_template.add_endpoint(func, f'/call/{name}', tags=[self.name])
+            swagger_template.add_endpoint(func, f'/call/{name}', tags=["MlChain Format APIs"])
+            swagger_template.add_endpoint(func, f'/call_raw/{name}', tags=["MlChain Raw Output APIs"])
+
+        swagger_template.add_core_endpoint(self.model._get_parameters_of_func, '/api/get_params/{function_name}', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._get_description_of_func, '/api/des_func/{function_name}', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self._check_status, '/api/ping', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._get_all_description, '/api/description', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._list_all_function, '/api/list_all_function', tags=["MlChain Core APIs"])
+        swagger_template.add_core_endpoint(self.model._list_all_function_and_description, '/api/list_all_function_and_description', tags=["MlChain Core APIs"])
 
         SWAGGER_URL = 'swagger'
 
         async def swagger_home(request: Request):
-            return self.mlchain_template.TemplateResponse('swaggerio/index.html', {'request': request})
+            return self.mlchain_template.TemplateResponse('swaggerui/index.html', {'request': request})
 
         async def swagger_endpoint(request: Request):
             path = request.path_params['path']
             path = path.strip('.')
-
+    
             if path == 'swagger.json':
                 return JSONResponse(swagger_template.template)
+            
+            if path == "":
+                return await swagger_home(request)
                 
-            return FileResponse(os.path.join(TEMPLATE_PATH, path))
+            return StarletteFileResponse(os.path.join(SWAGGER_PATH, path))
 
-        self.app.add_route(path="/{0}/?".format(SWAGGER_URL), route=swagger_home, methods=['GET'], name="swagger_home")
-        self.app.add_route(path="/%s/{path:path}/?" % (SWAGGER_URL), route=swagger_endpoint, methods=['GET'], name="swagger_home_path")
+        self.app.add_route(path="/{0}".format(SWAGGER_URL), route=swagger_home, methods=['GET'], name="swagger_home")
+        self.app.add_route(path="/%s/{path:path}" % (SWAGGER_URL), route=swagger_endpoint, methods=['GET'], name="swagger_home_path")
     
     def run(self, host='127.0.0.1', port=8080, bind=None,
             cors=False, cors_allow_origins:list=["*"], gunicorn=True,
