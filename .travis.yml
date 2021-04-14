@@ -24,32 +24,26 @@ jobs:
   include:
     - stage: sanity_check
       os: linux
-      python: 3.7
+      python: 3.8
       arch: amd64
       install:
         - pip install -U pylint pylint-exit 
       script:
         - pylint --output-format=text $(git ls-files '*.py') || pylint-exit $? 
 
-    - stage: build
-      install:
-        - pip3 install -U scikit-build awscli pip
-        - pip3 install -U -r requirements.txt
-      script:
-        - python3 setup.py bdist_wheel
-        - python3 setup.py install
+install:
+  - pip3 install -U scikit-build
+  - pip3 install -U awscli pip pytest coverage codecov attrs
 
-    - stage: test
-      install:
-        - pip3 install -U scikit-build pytest coverage codecov pip
-        - pip3 install -U attrs
-      script:
-        - pip3 install .
-        - python3 -m coverage run --source=. -m unittest discover
-        - python3 -m coverage combine
-        - python3 -m coverage report
-      after_success:
-        - codecov
+script:
+  - python3 setup.py bdist_wheel
+  - python3 setup.py install
+  - python3 -m coverage run --source=. -m unittest discover
+  - python3 -m coverage combine
+  - python3 -m coverage report
+
+after_success:
+  - codecov
 
     # - stage: deploy
     #   if: tag IS present
