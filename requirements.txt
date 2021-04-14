@@ -18,7 +18,8 @@ toml>=0.10.0
 trio>=0.17.0
 urllib3>=1.26.2
 uvicorn[standard]>=0.13.2
-uvloop==0.14.0; sys_platform != 'win32' and python_version >= '3.7'
+uvloop==0.14.0; sys_platform != 'win32' and python_version == '3.6'
+uvloop>=0.14.0; sys_platform != 'win32' and python_version >= '3.7'
 Werkzeug>=1.0.1
 httpx==0.16.1
 grpcio
