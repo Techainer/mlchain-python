@@ -32,7 +32,7 @@ jobs:
 
       - name: Set up conda
         # if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.6' }}
-        if: ${{ matrix.os == 'windows-latest' }}
+        if: ${{ matrix.os != 'windows-latest' }}
         uses: s-weigand/setup-conda@v1
         with:
           python-version: ${{ matrix.python-version}}
