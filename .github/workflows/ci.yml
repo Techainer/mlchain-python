@@ -51,7 +51,9 @@ jobs:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
         run: |
           python3 -m coverage run --source=. -m unittest discover
+          echo "Done test. Start combining coverage report"
           python3 -m coverage combine
+          echo "Done combine coverage report. Showing it out"
           python3 -m coverage report
       
       - name: Upload coverage report
