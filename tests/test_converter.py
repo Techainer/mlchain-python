@@ -30,7 +30,7 @@ class TestConverter(unittest.TestCase):
         logger.info("Running converter test")
 
     def test_list(self):
-        print(get_type(Union[dict, list]))
+        logger.info(get_type(Union[dict, list]))
         test_cases = [
             {
                 "origin": "[\"haha\"]",
