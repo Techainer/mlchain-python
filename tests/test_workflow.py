@@ -137,4 +137,5 @@ class TestWorkflow(unittest.TestCase):
         )
         inputs = range(20)
         results = pipeline.run(inputs)
+        logger.info("Done pipeline execution. Checking the results")
         assert [x.output[-1].output for x in results] == [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77]

@@ -11,5 +11,5 @@ gunicorn: # config apm-server if uses gunicorn wrapper
   keepalive: 60
   max_requests: 0
   threads: 1
-  workers: 5
+  workers: 1
   worker_class: 'gthread'
