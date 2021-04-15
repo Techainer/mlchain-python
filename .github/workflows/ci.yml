@@ -50,7 +50,7 @@ jobs:
           KMP_DUPLICATE_LIB_OK: "TRUE"
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: "YES"
         run: |
-          python3 -m coverage run --source=. tests/run_all_test.py
+          python3 -m coverage run -m pytest -s --log-cli-level=DEBUG
           echo "Done test. Start combining coverage report"
           python3 -m coverage combine
           echo "Done combine coverage report. Showing it out"

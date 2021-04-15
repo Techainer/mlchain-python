@@ -8,13 +8,12 @@ from click.testing import CliRunner
 from mlchain.cli.main import main
 from mlchain.workflows import Background, Task
 
-from .utils import test_breaking_process
-
 logger = logging.getLogger()
 cli = main(is_testing=True)
 runner = CliRunner()
 
 def launch_test_server():
+    from .utils import test_breaking_process
     test_breaking_process(runner, cli, args = 'run'.split(), new_pwd = 'tests/dummy_server', prog_name = 'python3 -m mlchain', wait_time = 60)
 
 class TestClient(unittest.TestCase):

@@ -4,7 +4,6 @@ import os
 
 from click.testing import CliRunner
 from mlchain.cli.main import main
-from .utils import test_breaking_process
 
 logger = logging.getLogger()
 
@@ -36,4 +35,5 @@ class TestCLI(unittest.TestCase):
             return 0
         cli = main(is_testing=True)
         runner = CliRunner()
+        from .utils import test_breaking_process
         test_breaking_process(runner, cli, args='run'.split(), new_pwd='tests/dummy_server', prog_name='python3 -m mlchain')
