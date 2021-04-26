@@ -39,8 +39,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip3 install -U scikit-build
-          pip3 install -U awscli pip pytest coverage codecov
+          pip3 install -U scikit-build --user
+          pip3 install -U awscli pip pytest coverage codecov --user
 
       - name: Build and install
         run: python3 setup.py install
