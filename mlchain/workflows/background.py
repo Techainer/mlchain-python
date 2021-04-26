@@ -89,6 +89,12 @@ class BackgroundTask(Thread):
             
         if self.callback is not None:
             self.pool_limit_callback.shutdown(wait=True)
+        self.is_done = True
+
+    def wait(self, interval: float = 0.1):
+        while not self.is_done:
+            time.sleep(interval)
+        return self.output
 
     def wait(self, interval: float = 0.1):
         while not self.is_done:
