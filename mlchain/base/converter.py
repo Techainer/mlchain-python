@@ -30,6 +30,14 @@ def import_cv2():
         import cv2 as cv
         cv2 = cv
 
+def bytes2ndarray(value: bytes) -> np.ndarray: 
+    import_cv2()
+    nparr = np.fromstring(value, np.uint8)
+    img = cv2.imdecode(nparr, CV2FLAG)
+    if img is not None:
+        return img
+    else:
+        raise MLChainAssertionError("Can't decode bytes {0} to ndarray. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 def str2ndarray(value: str) -> np.ndarray:
     if value.lower() in ALL_LOWER_NULL:
@@ -405,6 +413,7 @@ class AsyncConverter(Converter):
         raise MLChainAssertionError("Not found converter from {0} to {1}. Please check the variable {2}".format(type(value), out_type, mlchain_context.CONVERT_VARIABLE))
 
 Converter.add_convert(lambda x: str(x), int, str)
+Converter.add_convert(bytes2ndarray)
 Converter.add_convert(str2ndarray)
 Converter.add_convert(list2ndarray)
 Converter.add_convert(str2int)

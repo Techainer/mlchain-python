@@ -1,7 +1,7 @@
 import os
 from io import BytesIO
 import httpx
-from mlchain.storage import Path
+from pathlib import Path
 from mlchain.base.log import except_handler, logger
 from mlchain.server.base import RawResponse, JsonResponse
 from .base import MLClient
@@ -130,6 +130,9 @@ class HttpClient(MLClient):
                                           'application/octet-stream')))
                 args[idx] = file_name
             elif isinstance(value, Path):
+                if not value.exists(): 
+                    raise MlChainError(msg="File {0} is not exists".format(value), status_code=500)
+
                 file_name = '__file__{0}'.format(idx)
                 files.append((file_name, (os.path.basename(value), open(value, 'rb'),
                                           'application/octet-stream')))
@@ -141,6 +144,9 @@ class HttpClient(MLClient):
                                           'application/octet-stream')))
                 kwargs[key] = file_name
             elif isinstance(value, Path):
+                if not value.exists(): 
+                    raise MlChainError(msg="File {0} is not exists".format(value), status_code=500)
+                    
                 file_name = '__file__{0}'.format(key)
                 files.append((file_name, (os.path.basename(value), open(value, 'rb'),
                                           'application/octet-stream')))

@@ -31,3 +31,4 @@ from .context import mlchain_context
 
 from .base.exceptions import *
 from .config import mlconfig
+from .client import Client
