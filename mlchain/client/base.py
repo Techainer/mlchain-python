@@ -90,7 +90,7 @@ class MLClient:
     def __init__(self, api_key=None, api_address=None, serializer='msgpack',
                  image_encoder=None, timeout=5 * 60,
                  name=None, version='lastest',
-                 check_status=False, headers=None, **kwargs):
+                 check_status=False, headers={}, **kwargs):
         """
         Client to communicate with Mlchain server
         :api_key: Your API KEY
@@ -112,7 +112,8 @@ class MLClient:
             else:
                 api_address = mlchain.API_ADDRESS
         self.api_address = api_address
-        self.headers = headers or dict
+        # self.headers = headers or dict
+        self.headers = headers
         self.json_serializer = JsonSerializer()
 
         # Serializer initalization
@@ -191,7 +192,9 @@ class MLClient:
         def _call_post(): 
             context = {key: value
                     for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
-            context.update(self.headers())
+            # context.update(self.headers())
+            if type(self.headers)==dict and len(self.headers)!=0:
+                context.update(**self.headers)
 
             output = None
             try:
