@@ -66,11 +66,11 @@ op_flask = click.option("--flask", "server", flag_value="flask", help="Run with 
 op_starlette = click.option("--starlette", "server", flag_value="starlette", help="Run with Starlette server")
 op_grpc = click.option("--grpc", "server", flag_value="grpc", help="Run with gRPC server")
 op_worker = click.option("--workers", "-w", "workers", default=None, type=int, help="Number of workers")
-op_thread = click.option("--threads", "-w", "threads", default=None, type=int, help="Number of threads")
+op_thread = click.option("--threads", "-t", "threads", default=None, type=int, help="Number of threads")
 op_mode = click.option("--mode", "-m", "mode", default=None, type=str, help="The mode of mlconfig")
 op_api_format = click.option("--api_format", "-a", "api_format", default=None, type=str, help="Change the API Format class")
 op_debug = click.option('--debug', '-d', is_flag=True, help="Debug or not")
-
+op_preload = click.option('--preload', '-pre', is_flag=True, help="Run worker in preload mode")
 @click.command(
     "run",
     short_help="Run a development server.",
@@ -91,6 +91,7 @@ op_debug = click.option('--debug', '-d', is_flag=True, help="Debug or not")
 @op_mode
 @op_api_format
 @op_debug
+@op_preload
 @click.option("--ngrok/--no-ngrok", default=False, type=bool)
 @click.argument("kws", nargs=-1)
 def run_command(
@@ -107,6 +108,7 @@ def run_command(
     mode,
     api_format,
     debug,
+    preload,
     ngrok,
     kws,
 ):
@@ -341,6 +343,7 @@ def run_command(
             gunicorn_config['loglevel'] = "debug"
         if workers is not None:
             gunicorn_config["workers"] = workers
+        gunicorn_config['preload_app'] = preload
         if threads is not None:
             gunicorn_config["threads"] = threads
 
