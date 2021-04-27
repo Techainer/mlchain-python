@@ -112,7 +112,6 @@ class MLClient:
             else:
                 api_address = mlchain.API_ADDRESS
         self.api_address = api_address
-        # self.headers = headers or dict
         self.headers = headers
         self.json_serializer = JsonSerializer()
 
@@ -192,8 +191,8 @@ class MLClient:
         def _call_post(): 
             context = {key: value
                     for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
-            # context.update(self.headers())
-            if type(self.headers)==dict and len(self.headers)!=0:
+
+            if isinstance(self.headers, dict):
                 context.update(**self.headers)
 
             output = None
@@ -225,7 +224,9 @@ class MLClient:
         def _call_get(): 
             context = {key: value
                         for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
-            context.update(self.headers())
+            
+            if isinstance(self.headers, dict):
+                context.update(**self.headers)
 
             output = None
             try:
