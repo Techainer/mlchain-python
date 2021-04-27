@@ -12,6 +12,7 @@ import traceback
 from sentry_sdk import push_scope, start_transaction
 from mlchain import mlconfig
 import inspect
+from starlette.requests import Request
 
 class View:
     def __init__(self, server, formatter: BaseFormat = None,

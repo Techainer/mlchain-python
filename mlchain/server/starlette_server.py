@@ -301,7 +301,7 @@ class StarletteServer(AsyncMLServer):
             routes= [
                 Mount('/{0}'.format(static_url_path.strip("/")), app=StaticFiles(directory=static_folder), name="static"),
                 Mount('/call', routes=[
-                    Route('/{function_name:path}', StarletteView(self, self.api_format, self.authentication), methods=['POST', 'GET'], name="call")
+                    Route('/{function_name:path}', StarletteView(self, self.api_format_class, self.authentication), methods=['POST', 'GET'], name="call")
                 ]),
                 Mount('/call_raw', routes=[
                     Route('/{function_name:path}', StarletteView(self, RawFormat(), self.authentication), methods=['POST', 'GET'], name="call_raw")
