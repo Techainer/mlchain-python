@@ -37,7 +37,7 @@ from httpx import (
     WriteError,
     WriteTimeout,
 )
-from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError, MLChainAssertionError
+from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError
 
 class AsyncStorage:
     def __init__(self, function):
@@ -115,7 +115,7 @@ class MLClient:
         if isinstance(headers, dict):
             self.headers = headers
         else:
-            raise MLChainAssertionError("{} headers is invalid. Only allow dictionary header.".format(type(headers)))
+            raise AssertionError("{} headers is invalid. Only allow dictionary header.".format(type(headers)))
         self.json_serializer = JsonSerializer()
 
         # Serializer initalization
