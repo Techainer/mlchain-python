@@ -37,7 +37,7 @@ from httpx import (
     WriteError,
     WriteTimeout,
 )
-from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError
+from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError, MLChainAssertionError
 
 class AsyncStorage:
     def __init__(self, function):
@@ -112,7 +112,10 @@ class MLClient:
             else:
                 api_address = mlchain.API_ADDRESS
         self.api_address = api_address
-        self.headers = headers
+        if isinstance(headers, dict):
+            self.headers = headers
+        else:
+            raise MLChainAssertionError("{} headers is invalid. Only allow dictionary header.".format(type(headers)))
         self.json_serializer = JsonSerializer()
 
         # Serializer initalization
@@ -191,9 +194,7 @@ class MLClient:
         def _call_post(): 
             context = {key: value
                     for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
-
-            if isinstance(self.headers, dict):
-                context.update(**self.headers)
+            context.update(**self.headers)
 
             output = None
             try:
@@ -224,13 +225,11 @@ class MLClient:
         def _call_get(): 
             context = {key: value
                         for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
-            
-            if isinstance(self.headers, dict):
-                context.update(**self.headers)
+            context.update(**self.headers)
 
             output = None
             try:
-                output = self._get(api_name, self.headers(), timeout)
+                output = self._get(api_name, self.headers, timeout)
             except ConnectError: 
                 raise MLChainConnectionError(msg="Client call can not connect into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
             except TimeoutError: 
