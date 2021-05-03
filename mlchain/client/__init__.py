@@ -5,7 +5,7 @@ from .http_client import HttpClient
 
 
 class Client(HttpClient, GrpcClient):
-    def __init__(self, api_key=None, api_address=None, serializer='json', timeout=5 * 60, headers=None, type='http',
+    def __init__(self, api_key=None, api_address=None, serializer='json', timeout=5 * 60, headers={}, type='http',
                  name: str = "", version: str = "", check_status=False):
         assert isinstance(type, str), "type model must be a string"
         self._api_key = api_key

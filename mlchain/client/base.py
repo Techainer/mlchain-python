@@ -90,7 +90,7 @@ class MLClient:
     def __init__(self, api_key=None, api_address=None, serializer='msgpack',
                  image_encoder=None, timeout=5 * 60,
                  name=None, version='lastest',
-                 check_status=False, headers=None, **kwargs):
+                 check_status=False, headers={}, **kwargs):
         """
         Client to communicate with Mlchain server
         :api_key: Your API KEY
@@ -112,7 +112,10 @@ class MLClient:
             else:
                 api_address = mlchain.API_ADDRESS
         self.api_address = api_address
-        self.headers = headers or dict
+        if isinstance(headers, dict):
+            self.headers = headers
+        else:
+            raise AssertionError("{} headers is invalid. Only allow dictionary header.".format(type(headers)))
         self.json_serializer = JsonSerializer()
 
         # Serializer initalization
@@ -191,7 +194,7 @@ class MLClient:
         def _call_post(): 
             context = {key: value
                     for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
-            context.update(self.headers())
+            context.update(**self.headers)
 
             output = None
             try:
@@ -222,11 +225,11 @@ class MLClient:
         def _call_get(): 
             context = {key: value
                         for (key, value) in mlchain_context.items() if key.startswith('MLCHAIN_CONTEXT_')}
-            context.update(self.headers())
+            context.update(**self.headers)
 
             output = None
             try:
-                output = self._get(api_name, self.headers(), timeout)
+                output = self._get(api_name, self.headers, timeout)
             except ConnectError: 
                 raise MLChainConnectionError(msg="Client call can not connect into Server: {0}. Function: {1}. GET".format(self.api_address, api_name))
             except TimeoutError: 
