@@ -8,33 +8,8 @@ from mlchain.base.log import except_handler, logger
 from mlchain.server.base import RawResponse
 from sentry_sdk import Hub
 from httpx import (
-    CloseError,
     ConnectError,
-    ConnectTimeout,
-    CookieConflict,
-    DecodingError,
-    HTTPError,
-    HTTPStatusError,
-    InvalidURL,
-    LocalProtocolError,
-    NetworkError,
-    PoolTimeout,
-    ProtocolError,
-    ProxyError,
-    ReadError,
     ReadTimeout,
-    RemoteProtocolError,
-    RequestError,
-    RequestNotRead,
-    ResponseClosed,
-    ResponseNotRead,
-    StreamConsumed,
-    StreamError,
-    TimeoutException,
-    TooManyRedirects,
-    TransportError,
-    UnsupportedProtocol,
-    WriteError,
     WriteTimeout,
 )
 from mlchain.base.exceptions import MLChainConnectionError, MLChainTimeoutError
