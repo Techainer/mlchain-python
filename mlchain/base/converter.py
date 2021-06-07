@@ -10,6 +10,7 @@ from PIL import Image, ImageSequence
 from .exceptions import MLChainAssertionError
 from ..config import mlconfig
 from ..context import mlchain_context
+import ast 
 
 cv2 = None
 ALL_LOWER_TRUE = set(["true", "yes", "yeah", "y"])
@@ -118,7 +119,7 @@ def str2bool(value: str) -> bool:
 
 def str2list(value: str) -> List:
     try:
-        l = json.loads(value)
+        l = ast.literal_eval(value)
         return l
     except:
         return [value]
@@ -126,11 +127,17 @@ def str2list(value: str) -> List:
 
 def str2dict(value: str) -> dict:
     try:
-        l = json.loads(value)
+        l = ast.literal_eval(value)
         return l
     except:
         raise MLChainAssertionError("Can't convert {0} to dict. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
+def str2set(value: str) -> set: 
+    try:
+        l = ast.literal_eval(value)
+        return l
+    except:
+        raise MLChainAssertionError("Can't convert {0} to set. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 def str2bytes(value: str) -> bytes:
     return value.encode()
@@ -307,9 +314,11 @@ class Converter:
                     return self.convert_file(self._get_file_name(value),
                                              self._get_data(value), out_type)
                 if origin in [List, list]:
-                    return [self.convert(value, args)]
+                    value = str2list(value)
+                    return [self.convert(v, args) for v in value]
                 if origin in [Set, set]:
-                    return {self.convert(value, args)}
+                    value = str2set(value)
+                    return {self.convert(value, args) for v in value}
                 raise MLChainAssertionError(
                     "Can't convert value {0} to {1}. Please check the variable {2}".format(value, out_type, mlchain_context.CONVERT_VARIABLE),
                     code="convert")
@@ -423,6 +432,8 @@ Converter.add_convert(str2bytes, str, bytes)
 Converter.add_convert(str2bytes, str, bytearray)
 Converter.add_convert(str2list, str, list)
 Converter.add_convert(str2list, str, List)
+Converter.add_convert(str2set, str, set)
+Converter.add_convert(str2set, str, Set)
 Converter.add_convert(str2dict, str, Dict)
 Converter.add_convert(str2dict, str, dict)
 Converter.add_convert_file('jpg,jpeg,png,gif,bmp,jpe,jp2,pbm,pgm,ppm,sr,ras',
