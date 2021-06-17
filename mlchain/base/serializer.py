@@ -12,7 +12,7 @@ import sys
 import numpy as np
 from msgpack import packb, unpackb
 from PIL import Image
-from .exceptions import MLChainSerializationError
+from .exceptions import MLChainSerializationError, MlChainError
 
 cv2 = None
 
@@ -121,6 +121,9 @@ class Serializer:
         if otype not in self._serializers:
             # Fallback to a generic serializer (if available)
             otype = object
+
+        if isinstance(obj, MlChainError): 
+            raise obj
 
         try:
             typeid, serialize = self._serializers[otype]
