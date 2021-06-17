@@ -4,6 +4,7 @@ import importlib
 import sys
 import copy
 import GPUtil
+import logging
 from mlchain import logger
 from mlchain.server import MLServer
 from mlchain.base import ServeModel
@@ -113,6 +114,11 @@ def run_command(
     kws,
 ):
     kws = list(kws)
+
+    ############
+    # Get Config File
+    ############
+
     if isinstance(entry_file, str) and not os.path.exists(entry_file):
         kws = [f"--entry_file={entry_file}"] + kws
         entry_file = None
@@ -147,6 +153,15 @@ def run_command(
                 f"No {mode} mode are available. Found these mode in config file: {available_mode}"
             )
     mlconfig.load_config(config)
+
+    ############
+    # End Get Config File
+    ############
+
+    ############
+    # Get Additional Params
+    ############
+
     for kw in kws:
         if kw.startswith("--"):
             tokens = kw[2:].split("=", 1)
@@ -157,6 +172,14 @@ def run_command(
                 raise AssertionError("Unexpected param {0}".format(kw))
         else:
             raise AssertionError("Unexpected param {0}".format(kw))
+
+    ############
+    # End Get Additional Params
+    ############
+
+    ############
+    # Get host, port, entry file
+    ############
     model_id = mlconfig.get_value(None, config, "model_id", None)
     entry_file = mlconfig.get_value(entry_file, config, "entry_file", "server.py")
     if entry_file.strip() == "":
@@ -171,39 +194,65 @@ def run_command(
     if len(bind) == 0:
         bind = None
     bind = mlconfig.get_value(bind, config, "bind", [])
+    bind = list(bind)
+
     wrapper = mlconfig.get_value(wrapper, config, "wrapper", None)
     if wrapper == "gunicorn" and os.name == "nt":
         logger.warning(
             "Gunicorn warper are not supported on Windows. Switching to None instead."
         )
         wrapper = None
+    ############
+    # End Get host, port, entry file
+    ############
 
+
+    ############
+    # Get workers and threads
+    ############
     if "gunicorn" in config:
-        if "workers" in config["gunicorn"]:
+        if "workers" in config["gunicorn"] and workers is None:
             workers = config["gunicorn"]["workers"]
         
         if mlchain_config.gunicorn_workers is not None:
             workers = mlchain_config.gunicorn_workers
-    workers = int(workers) if workers is not None else 1
 
     if "gunicorn" in config:
-        if "threads" in config["gunicorn"]:
+        if "threads" in config["gunicorn"] and threads is None:
             threads = config["gunicorn"]["threads"]
         
         if mlchain_config.gunicorn_threads is not None:
             threads = mlchain_config.gunicorn_threads
-    threads = int(threads) if threads is not None else 1
+    ############
+    # End Get workers and threads
+    ############
 
+    ############
+    # Get name, version and cors
+    ############
     name = mlconfig.get_value(name, config, "name", None)
-    cors = mlconfig.get_value(None, config, "cors", False)
-    cors_allow_origins = mlconfig.get_value(None, config, "cors_allow_origins", ['*'])
+    version = mlconfig.get_value(None, config, "version", "0.0")
+    version = str(version)
 
+    cors = mlconfig.get_value(None, config, "cors", True)
+    cors_allow_origins = mlconfig.get_value(None, config, "cors_allow_origins", ['*'])
+    ############
+    # End Get name, version and cors
+    ############
+
+    ############
+    # Get static
+    ############
     static_folder = mlconfig.get_value(None, config, "static_folder", None)
     static_url_path = mlconfig.get_value(None, config, "static_url_path", "static")
     template_folder = mlconfig.get_value(None, config, "template_folder", None)
+    ############
+    # End Get static
+    ############
 
-    version = mlconfig.get_value(None, config, "version", "0.0")
-    version = str(version)
+    ############
+    # Get API format and keys
+    ############
     api_format = mlconfig.get_value(api_format, config, "api_format", None)
     api_keys = os.getenv("API_KEYS", None)
     if api_keys is not None:
@@ -213,18 +262,28 @@ def run_command(
         authentication = None
     else:
         authentication = Authentication(api_keys)
-    import logging
+    ############
+    # End Get API format and keys
+    ############
 
     if debug: 
         logger.setLevel(logging.DEBUG)
 
-    bind = list(bind)
+
+    ############
+    # Run with ngrok 
+    ############
     if ngrok:
         from pyngrok import ngrok as pyngrok
 
         endpoint = pyngrok.connect(port=port)
         logger.info("Ngrok url: {0}".format(endpoint))
         os.environ["NGROK_URL"] = endpoint
+
+
+    ############
+    # Run with grpc 
+    ############
     if server == "grpc":
         from mlchain.server.grpc_server import GrpcServer
 
@@ -240,6 +299,9 @@ def run_command(
         app = GrpcServer(app, name=name)
         app.run(host, port)
     elif wrapper == "gunicorn":
+        ############
+        # Run with gunicorn 
+        ############
         from gunicorn.app.base import BaseApplication
 
         gpus = select_gpu()
@@ -337,6 +399,10 @@ def run_command(
             bind.append("{0}:{1}".format(host, port))
 
         bind = list(set(bind))
+
+        ###
+        # Set the workers, threads and worker_class to run 
+        ###
         gunicorn_config = config.get("gunicorn", {})
         gunicorn_env = ["worker_class", "threads", "workers"]
         if debug: 
@@ -346,10 +412,14 @@ def run_command(
         gunicorn_config['preload_app'] = preload
         if threads is not None:
             gunicorn_config["threads"] = threads
-
+        
         for k in gunicorn_env:
             if get_env(k) in os.environ:
                 gunicorn_config[k] = os.environ[get_env(k)]
+        ###
+        # End Set the workers, threads and worker_class to run 
+        ###
+        
         if server == "flask":
             if "worker_class" in gunicorn_config:
                 if "uvicorn" in gunicorn_config["worker_class"]:
@@ -369,6 +439,9 @@ def run_command(
 
         GunicornWrapper(server, bind=bind, **gunicorn_config).run()
     elif server == "starlette":
+        ############
+        # Run with starlette 
+        ############
         from mlchain.server.starlette_server import StarletteServer
 
         app = get_model(entry_file, serve_model=True)
@@ -467,6 +540,9 @@ def run_command(
 
 
 def get_model(module, serve_model=False):
+    """
+    Get the serve_model from entry_file
+    """
     import_name = prepare_import(module)
 
     try:
