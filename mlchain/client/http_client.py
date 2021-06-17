@@ -105,13 +105,13 @@ class HttpClient(MLClient):
                                 headers=headers)
             if output.status_code != 200:
                 if output.status_code == 500:
-                    raise MlChainError(msg="Client call into Server {0}. But function {1} raised an error. GET".format(
-                        self.api_address, api_name), status_code=500)
+                    raise MlChainError(msg="Client call into Server {0}. But function {1} raised an error: {2}".format(
+                        self.api_address, api_name, output.text), status_code=500)
                 else:
                     error_code = HTTP_ERROR_CODE.get(output.status_code, None)
                     if error_code is not None:
-                        raise MlChainError(msg="Client call into Server {0}. But function {1} receive this error code {2}: {3}. GET".format(
-                            self.api_address, api_name, output.status_code, error_code), status_code=output.status_code)
+                        raise MlChainError(msg="Client call into Server {0}. But function {1} receive this error code {2}: {3} {4}".format(
+                            self.api_address, api_name, output.status_code, error_code, output.text), status_code=output.status_code)
 
 
         if not self.check_response_ok(output):
@@ -165,13 +165,13 @@ class HttpClient(MLClient):
                                  files=files)
             if output.status_code != 200:
                 if output.status_code == 500:
-                    raise MlChainError(msg="Client call into Server {0}. But function {1} raised an error. POST".format(
-                        self.api_address, function_name), status_code=500)
+                    raise MlChainError(msg="Client call into Server {0}. But function {1} raised an error: {2}".format(
+                        self.api_address, function_name, output.text), status_code=500)
                 else:
                     error_code = HTTP_ERROR_CODE.get(output.status_code, None)
                     if error_code is not None:
-                        raise MlChainError(msg="Client call into Server {0}. But function {1} receive this error code {2}: {3}. POST".format(
-                            self.api_address, function_name, output.status_code, error_code), status_code=output.status_code)
+                        raise MlChainError(msg="Client call into Server {0}. But function {1} receive this error code {2}: {3} {4}".format(
+                            self.api_address, function_name, output.status_code, error_code, output.text), status_code=output.status_code)
 
         if 'response-type' in output.headers:
             response_type = output.headers.get('response-type', 'mlchain/raw')
