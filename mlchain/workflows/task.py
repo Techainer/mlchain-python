@@ -58,7 +58,7 @@ class Task:
         return self.__exit__(exc_type, exc_val, exc_tb)
 
     def __enter__(self):
-        mlchain_context.set(self.context)
+        mlchain_context.update(self.context)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -88,7 +88,7 @@ class SyncTask:
         return self.func_(*self.args, **self.kwargs)
 
     def __enter__(self):
-        mlchain_context.set(self.context)
+        mlchain_context.update(self.context)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass

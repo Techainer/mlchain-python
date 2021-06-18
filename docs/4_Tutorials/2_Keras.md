@@ -275,8 +275,8 @@ name: Fashion-MNIST classifier # name of service
 entry_file: main.py # python file contains object ServeModel
 host: localhost # host service
 port: 5000 # port service
-server: flask # option flask or quart or grpc
-wrapper: None # option None or gunicorn or hypercorn
+server: flask # option flask or starlette or grpc
+wrapper: None # option None or gunicorn
 cors: true
 dump_request: None # None or path folder log request
 version: '1.0.0'
@@ -289,11 +289,6 @@ gunicorn: # config apm-server if uses gunicorn wrapper
   max_requests: 0
   threads: 10
   worker_class: 'gthread'
-  umask: '0'
-hypercorn: # config apm-server if uses hypercorn wrapper
-  keep_alive_timeout: 60
-  worker_class: 'asyncio'
-  umask: 0
 
 mode:
   default: dev  # running mode

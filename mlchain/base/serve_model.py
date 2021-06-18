@@ -4,8 +4,8 @@ from threading import Lock, Event
 import itertools
 import types
 from mlchain.context import mlchain_context
-from .exceptions import MLChainAssertionError, MlChainError
-
+from .exceptions import MLChainAssertionError, MlChainError, MLChain404Error
+from fuzzywuzzy import process as fuzzywuzzy_process
 
 def non_thread(timeout=-1):
     if timeout is None or (isinstance(timeout, (float, int)) and timeout <= 0):
@@ -31,6 +31,7 @@ def non_thread(timeout=-1):
 
         f.__signature__ = signature(func)
         f.__qualname__ = func.__qualname__
+        f.__doc__ = func.__doc__
         return f
 
     return wrapper
@@ -288,6 +289,12 @@ class ServeModel:
             'all_attributes': self._list_all_atrributes()
         }
         return output
+    
+    def _check_similar_function(self, function_name): 
+        """
+        Check the most similar function of a function_name
+        """
+        return [x[0] for x in fuzzywuzzy_process.extract(function_name, self.all_serve_function, limit=3)]
 
     def get_function(self, function_name):
         if len(function_name) == 0:
@@ -299,8 +306,7 @@ class ServeModel:
             if function_name not in self.all_serve_function:
                 if function_name in self.all_atrributes:
                     return getattr(self.model, function_name)
-                raise MLChainAssertionError("This function or attribute hasn't been served or in blacklist. "
-                                            "Available function: {0}".format(self.all_serve_function))
+                raise MLChain404Error("This function or attribute hasn't been served or in blacklist. Do you mean: {0}".format(self._check_similar_function(function_name)))
 
             return getattr(self.model, function_name)
 
@@ -322,7 +328,7 @@ class ServeModel:
                 if function_name not in self.all_serve_function:
                     if function_name in self.all_atrributes:
                         return getattr(self.model, function_name)
-                    raise MLChainAssertionError("This function or attribute hasn't been served or in blacklist")
+                    raise MLChain404Error("This function or attribute hasn't been served or in blacklist. Do you mean: {0}".format(self._check_similar_function(function_name)))
 
                 func_ = getattr(self.model, function_name)
 
@@ -350,8 +356,8 @@ class ServeModel:
                 if function_name not in self.all_serve_function:
                     if function_name in self.all_atrributes:
                         return getattr(self.model, function_name)
-                    raise MLChainAssertionError("This function or attribute hasn't been served or in blacklist")
-
+                    raise MLChain404Error("This function or attribute hasn't been served or in blacklist. Do you mean: {0}".format(self._check_similar_function(function_name)))
+                
                 func_ = getattr(self.model, function_name)
 
             if inspect.iscoroutinefunction(func_):

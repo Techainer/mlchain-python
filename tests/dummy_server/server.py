@@ -1,13 +1,17 @@
+import logging
+
 import cv2
 import numpy as np
 from mlchain.base import ServeModel
 from mlchain.decorators import except_serving
 
+logger = logging.getLogger()
+
 
 class Model():
     """ Just a dummy model """
     def __init__(self):
-        pass
+        logger.info("Init dummy model sucessfully!")
 
 
     def predict(self, image: np.ndarray = None):

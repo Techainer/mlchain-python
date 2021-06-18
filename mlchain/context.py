@@ -1,92 +1,64 @@
+"""
+Mlchain Context
+Borrowed a little from: https://github.com/tomwojcik/starlette-context. Thanks for the contribution!
+"""
 import contextvars
-from copy import deepcopy
+import copy
 
-class MLChainContext:
-    variables = contextvars.ContextVar("mlchain_variables")
+from collections import UserDict
+from contextvars import copy_context
+from typing import Any
+from mlchain import _request_scope_context_storage
 
-    def __getitem__(self, item):
+class MLChainContext(UserDict):
+    """
+    A mapping with dict-like interface.
+    """
+    def __init__(self, *args: Any, **kwargs: Any):
+        # not calling super on purpose
+        if args or kwargs:
+            raise AttributeError("Can't instantiate with attributes")
+
+    @property
+    def data(self) -> dict:  # type: ignore
+        """
+        Dump this to json. Object itself it not serializable.
+        """
         try:
-            variables = self.variables.get()
-            if item in variables:
-                return variables[item]
-            return None
-        except:
-            return None
-
-    def __setitem__(self, key, value):
-        try:
-            variables = self.variables.get()
-            if variables is None:
-                variables = {}
-        except:
+            return _request_scope_context_storage.get()
+        except LookupError as e:
             variables = {}
-        variables[key] = value
-        self.variables.set(variables)
+            _request_scope_context_storage.set(variables)
 
-    def pop(self, key):
-        try:
-            variables = self.variables.get()
-            if variables is None:
-                variables = {}
-        except:
-            variables = {}
-        if key in variables:
-            variables.pop(key)
-        self.variables.set(variables)
+            return _request_scope_context_storage.get()
 
-    def __contains__(self, item):
-        try:
-            variables = self.variables.get()
-            if item in variables:
-                return True
-            return False
-        except:
-            return False
+    @property
+    def exists(self) -> bool:
+        return _request_scope_context_storage in copy_context()
 
-    def items(self):
-        try:
-            variables = self.variables.get()
-            if variables is None:
-                variables = {}
-            return variables.items()
-        except:
-            return []
+    def to_dict(self) -> dict:
+        return self.data
 
-    def update(self, vars: dict):
-        try:
-            variables = self.variables.get()
-            if variables is None:
-                variables = {}
-        except:
-            variables = {}
-        variables.update(vars)
-        self.variables.set(variables)
+    def copy(self) -> dict:
+        return copy.copy(self.data)
 
-    def to_dict(self):
-        try:
-            variables = self.variables.get()
-            if variables is None:
-                variables = {}
-        except:
-            variables = {}
+    def set(self, variables: dict):
+        _request_scope_context_storage.set(variables)
+
         return variables
 
-    def copy(self):
-        try:
-            variables = self.variables.get()
-            if variables is None:
-                variables = {}
-        except:
-            variables = {}
-        return deepcopy(variables)
-
-    def set(self, variables):
-        self.variables.set(variables)
-
     def __getattr__(self, item):
-        return self.__getitem__(item)
+        try:
+            return self.__getitem__(item)
+        except: 
+            return None 
 
     def set_mlchain_context_id(self, value: str):
+        if not self.exists: 
+            self.set({"MLCHAIN_CONTEXT_ID": value})
+            return value
+
         self.update({"MLCHAIN_CONTEXT_ID": value})
+        return value
 
 mlchain_context = MLChainContext()

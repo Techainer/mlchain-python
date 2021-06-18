@@ -177,7 +177,6 @@ gunicorn: # config apm-server if uses gunicorn wrapper
     max_requests: 0
     threads: 1
     worker_class: 'gthread'
-    umask: '0'
 ```
 
 [(Optional) Learn more about mlconfig file](../Model Deployment/mlconfig.md)

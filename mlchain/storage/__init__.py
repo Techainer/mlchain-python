@@ -1,2 +1,2 @@
 from mlchain import logger
-from .base import MLStorage, Path
+from .base import MLStorage

@@ -12,7 +12,7 @@ import sys
 import numpy as np
 from msgpack import packb, unpackb
 from PIL import Image
-from .exceptions import MLChainSerializationError
+from .exceptions import MLChainSerializationError, MlChainError
 
 cv2 = None
 
@@ -63,6 +63,8 @@ class Serializer:
         self._serializers = {}
         self._deserializers = {}
 
+        self.add_serializer(type=set, serialize=_serialize_set,
+                            deserialize=_deserialize_set)
         self.add_serializer(type=bytes, serialize=_serialize_bytes,
                             deserialize=_deserialize_bytes)
 
@@ -120,11 +122,18 @@ class Serializer:
             # Fallback to a generic serializer (if available)
             otype = object
 
+        if isinstance(obj, MlChainError): 
+            raise obj
+
         try:
             typeid, serialize = self._serializers[otype]
         except KeyError:
-            raise MLChainSerializationError('No serializer found for type "{}"'
-                                            .format(orig_type)) from None
+            if callable(getattr(obj, "to_json", None)):
+                return obj.to_json()
+            if callable(getattr(obj, "dump_json", None)):
+                return obj.dump_json()
+            raise MLChainSerializationError('No serializer found for type {0}, or you can define "to_json" function in class'
+                                            .format(orig_type))
 
         try:
             # Handle msgpack_numpy 
@@ -148,6 +157,12 @@ class Serializer:
 
         return obj_repr
 
+
+def _serialize_set(obj): 
+    return list(obj)
+
+def _deserialize_set(obj):
+    return set(obj)
 
 def _serialize_ndarray(obj):
     if isinstance(obj, np.ndarray):

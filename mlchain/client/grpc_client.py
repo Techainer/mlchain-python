@@ -1,5 +1,5 @@
 import grpc
-from mlchain.storage import Path
+from pathlib import Path
 from mlchain.base.log import logger
 from .base import MLClient
 from ..server.protos import mlchain_pb2_grpc, mlchain_pb2

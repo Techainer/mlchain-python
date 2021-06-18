@@ -10,8 +10,8 @@ mlchain run [OPTIONS] [COMMAND]
 | --------------- | ------- | ----------- |
 | `--host <host name>` |  localhost  | API host |
 | `--port <api port>` |  5000  | API port |
-| `--flask/--quart` |  flask  | Web frameworks uses to run api |
-| `--gunicorn/--hypercorn` |    | Api framework wrapper to protect api |
+| `--flask/--starlette` |  flask  | Web frameworks uses to run api |
+| `--gunicorn` |    | Api framework wrapper to protect api |
 | `--mode <mode>` |    | environ |
 | `--rabbit/--redis` |   | Queue framework if use Async server |
 | `--config <path file config>` |  mlconfig.yaml  | Path of config file |

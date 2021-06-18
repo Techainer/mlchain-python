@@ -28,10 +28,10 @@ name: mlchain-server # name of service
 entry_file: server.py # python file contains object ServeModel
 host: localhost # host service
 port: 2222 # port service
-server: flask # option flask or quart or grpc
+server: flask # option flask or starlette or grpc
 trace: False # option True or False
 queue: None # option None or rabbit or redis
-wrapper: None # option None or gunicorn or hypercorn
+wrapper: None # option None or gunicorn
 log: False  # rate samples log
 monitor_sampling_rate: 1.0
 cors: true
@@ -49,11 +49,6 @@ gunicorn: # config apm-server if uses gunicorn wrapper
   max_requests: 0
   threads: 1
   worker_class: 'gthread'
-  umask: '0'
-hypercorn: # config apm-server if uses hypercorn wrapper
-  keep_alive_timeout: 60
-  worker_class: 'asyncio'
-  umask: 0
 
 elastic_apm: # config apm-server if uses trace
   server_url: 'http://localhost:8200' # if None read from environ ELASTIC_APM_SERVER_URL

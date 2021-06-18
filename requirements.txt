@@ -1,38 +1,35 @@
 attrs>=20.3.0
-blosc>=1.10.1; sys_platform != 'win32'
-Click>=7.1.2
-Flask>=1.1.2
+blosc>=1.10.4; sys_platform != 'win32'
+Click>=8.0.1
+Flask==1.1.2
 Flask-Cors>=3.0.9
-gunicorn>=20.0.4
-h2==4.0.0
+gunicorn>=20.1.0
 Jinja2>=2.11.2
 MarkupSafe>=1.1.1
 msgpack==1.0.2
-numpy<=1.19.4
+numpy<1.20; python_version == '3.6'
+numpy<=1.20.3; python_version >= '3.7'
 opencv-python>=4.1.2.30
 Pillow>=8.0.1
-Quart<=0.6.15; python_version < '3.7'
-Quart<=0.14.1; python_version > '3.6'
-Quart-CORS<=0.3.0
+starlette[full]>=0.14.2
 requests>=2.25.1
 six>=1.13.0
 toml>=0.10.0
-trio>=0.17.0
+trio>=0.19.0
 urllib3>=1.26.2
-uvicorn<=0.13.2
-uvloop>=0.14.0; sys_platform != 'win32'
+uvicorn[standard]>=0.14.0
+uvloop==0.14.0; sys_platform != 'win32' and python_version == '3.6'
+uvloop>=0.14.0; sys_platform != 'win32' and python_version >= '3.7'
 Werkzeug>=1.0.1
-httpx==0.16.1
-hypercorn<=0.5.4; python_version < '3.7'
-hypercorn>=0.11.1; python_version > '3.6'
+httpx==0.18.2
 grpcio
 protobuf>=3.10.0
 boto3>=1.16.43
 pyyaml>=5.3.1
-sentry-sdk[flask]>=0.19.5
-fuzzywuzzy
-GPUtil
+sentry-sdk[flask]>=1.1.0
+fuzzywuzzy>=0.18.0
+GPUtil>=1.4.0
 tqdm
-pyngrok
+pyngrok>=5.0.1
 python-Levenshtein
 pynvml
