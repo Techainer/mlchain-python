@@ -255,7 +255,7 @@ class FlaskServer(MLServer):
                          static_url_path=static_url_path)
 
         self.app.url_map.strict_slashes = False
-        self.app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024
+        self.app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024
         self.app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
         self.converter = Converter(FileStorage, self._get_file_name, self._get_data)
