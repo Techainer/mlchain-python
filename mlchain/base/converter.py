@@ -31,6 +31,17 @@ def import_cv2():
         import cv2 as cv
         cv2 = cv
 
+def ast_json_parse_string(value: str): 
+    try: 
+        l = ast.literal_eval(value)
+        return l 
+    except Exception as ex:
+        try:
+            l = json.loads(value)
+            return l
+        except Exception as ex1:
+            raise MLChainAssertionError("Can't convert {0} to Python list, dict, set. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
+
 def bytes2ndarray(value: bytes) -> np.ndarray: 
     import_cv2()
     nparr = np.fromstring(value, np.uint8)
@@ -81,9 +92,10 @@ def str2ndarray(value: str) -> np.ndarray:
         pass
 
     try:
+        l = ast_json_parse_string(value)
+
         # If it is a string array
-        import ast
-        arr = np.array(ast.literal_eval(value))
+        arr = np.array(l)
         if arr is not None:
             return arr
     except:
@@ -118,25 +130,24 @@ def str2bool(value: str) -> bool:
 
 
 def str2list(value: str) -> List:
-    try:
-        l = ast.literal_eval(value)
-        return l
-    except:
+    try: 
+        l = ast_json_parse_string(value)
+        return l 
+    except Exception as ex:
         return [value]
-
 
 def str2dict(value: str) -> dict:
     try:
-        l = ast.literal_eval(value)
+        l = ast_json_parse_string(value)
         return l
-    except:
+    except Exception as ex:
         raise MLChainAssertionError("Can't convert {0} to dict. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 def str2set(value: str) -> set: 
     try:
-        l = ast.literal_eval(value)
+        l = ast_json_parse_string(value)
         return l
-    except:
+    except Exception as ex:
         raise MLChainAssertionError("Can't convert {0} to set. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
 
 def str2bytes(value: str) -> bytes:
@@ -501,9 +512,10 @@ def str2pil(value: str) -> Image.Image:
         pass
 
     try:
+        l = ast_json_parse_string(value)
+
         # If it is a string array
-        import ast
-        return Image.fromarray(ast.literal_eval(value))
+        return Image.fromarray(l)
     except:
         raise MLChainAssertionError(
             "There's no way to convert to PIL Image with variable {0}. Please check the variable {1}".format(value, mlchain_context.CONVERT_VARIABLE))
