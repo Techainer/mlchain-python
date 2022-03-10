@@ -1,6 +1,6 @@
 attrs>=20.3.0
 blosc>=1.10.4; sys_platform != 'win32'
-Click>=7.1.2
+Click==7.1.2
 itsdangerous==1.1.0
 Flask==1.1.4
 Flask-Cors>=3.0.9
