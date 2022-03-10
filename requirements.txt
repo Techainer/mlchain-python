@@ -22,7 +22,6 @@ urllib3>=1.26.2
 uvicorn[standard]>=0.14.0
 uvloop==0.14.0; sys_platform != 'win32' and python_version == '3.6'
 uvloop>=0.14.0; sys_platform != 'win32' and python_version >= '3.7'
-Werkzeug>=1.0.1
 httpx==0.22.0
 grpcio
 protobuf>=3.10.0
