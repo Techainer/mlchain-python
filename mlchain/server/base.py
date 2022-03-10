@@ -3,7 +3,7 @@ import importlib
 import warnings
 from inspect import signature, _empty
 from collections import defaultdict
-from fuzzywuzzy.fuzz import ratio
+from thefuzz.fuzz import ratio
 from mlchain.base import ServeModel
 from mlchain.base.log import logger
 from mlchain.base.serializer import JsonSerializer, MsgpackSerializer, MsgpackBloscSerializer
