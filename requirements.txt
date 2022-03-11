@@ -1,15 +1,18 @@
 attrs>=20.3.0
 blosc>=1.10.4; sys_platform != 'win32'
-Click>=8.0.1
-Flask==1.1.2
+Click==7.1.2
+itsdangerous==1.1.0
+h11==0.12.0
+Flask==1.1.4
 Flask-Cors>=3.0.9
 gunicorn>=20.1.0
-Jinja2>=2.11.2
-MarkupSafe>=1.1.1
-msgpack==1.0.2
+gevent>=21.8.0
+MarkupSafe==2.0.1
+Jinja2==2.11.3
+msgpack==1.0.3
 numpy<1.20; python_version == '3.6'
 numpy<=1.20.3; python_version >= '3.7'
-opencv-python>=4.1.2.30
+opencv-python>=4.1.2.30, <4.5
 Pillow>=8.0.1
 starlette[full]>=0.14.2
 requests>=2.25.1
@@ -20,16 +23,15 @@ urllib3>=1.26.2
 uvicorn[standard]>=0.14.0
 uvloop==0.14.0; sys_platform != 'win32' and python_version == '3.6'
 uvloop>=0.14.0; sys_platform != 'win32' and python_version >= '3.7'
-Werkzeug>=1.0.1
-httpx==0.18.2
-grpcio==1.38.0
+Werkzeug==1.0.1
+httpx==0.22.0
+grpcio
 protobuf>=3.10.0
 boto3>=1.16.43
 pyyaml>=5.3.1
-sentry-sdk[flask]>=1.1.0
-fuzzywuzzy>=0.18.0
+sentry-sdk[flask]>=1.5.7
+thefuzz
 GPUtil>=1.4.0
 tqdm
 pyngrok>=5.0.1
-python-Levenshtein
 pynvml

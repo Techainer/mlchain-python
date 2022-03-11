@@ -5,7 +5,7 @@ import itertools
 import types
 from mlchain.context import mlchain_context
 from .exceptions import MLChainAssertionError, MlChainError, MLChain404Error
-from fuzzywuzzy import process as fuzzywuzzy_process
+from thefuzz import process as fuzzywuzzy_process
 
 def non_thread(timeout=-1):
     if timeout is None or (isinstance(timeout, (float, int)) and timeout <= 0):
