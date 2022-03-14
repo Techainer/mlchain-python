@@ -14,13 +14,13 @@ numpy<1.20; python_version == '3.6'
 numpy<=1.20.3; python_version >= '3.7'
 opencv-python>=4.1.2.30, <4.5
 Pillow>=8.0.1
-starlette[full]>=0.14.2
+starlette[full]==0.19.0
 requests>=2.25.1
 six>=1.13.0
 toml>=0.10.0
 trio>=0.19.0
 urllib3>=1.26.2
-uvicorn[standard]>=0.14.0
+uvicorn[standard]==0.17.6
 uvloop==0.14.0; sys_platform != 'win32' and python_version == '3.6'
 uvloop>=0.14.0; sys_platform != 'win32' and python_version >= '3.7'
 Werkzeug==1.0.1
