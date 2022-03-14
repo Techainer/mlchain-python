@@ -7,7 +7,7 @@ _request_scope_context_storage: ContextVar[Dict[Any, Any]] = ContextVar(
 )
 
 # Parameters of MLchain
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 
 HOST = "https://www.api.mlchain.ml"
 WEB_HOST = HOST
