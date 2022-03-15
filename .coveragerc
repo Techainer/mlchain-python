@@ -6,3 +6,6 @@ omit =
     setup.py
     mlchain/__main__.py
 concurrency = multiprocessing
+
+[report]
+ignore_errors = True
