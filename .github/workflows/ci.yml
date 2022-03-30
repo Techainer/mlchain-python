@@ -40,14 +40,14 @@ jobs:
       - name: Install dependencies for Unix
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
-          pip3 install -U scikit-build
-          pip3 install -U awscli pip pytest coverage codecov
+          python3 -m pip install -U scikit-build
+          python3 -m pip install -U awscli pip pytest coverage codecov setuptools
 
       - name: Install dependencies for Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          pip3 install -U scikit-build --user
-          pip3 install -U awscli pip pytest coverage codecov --user
+          python3 -m pip install -U scikit-build --user
+          python3 -m pip install -U awscli pip pytest coverage codecov --user
 
       - name: Build and install
         run: python3 setup.py install
