@@ -28,7 +28,7 @@ name: mlchain-server # name of service
 entry_file: server.py # python file contains object ServeModel
 host: localhost # host service
 port: 2222 # port service
-server: flask # option flask or starlette or grpc
+server: flask # option flask or starlette
 trace: False # option True or False
 queue: None # option None or rabbit or redis
 wrapper: None # option None or gunicorn

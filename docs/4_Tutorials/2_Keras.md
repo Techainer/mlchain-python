@@ -275,7 +275,7 @@ name: Fashion-MNIST classifier # name of service
 entry_file: main.py # python file contains object ServeModel
 host: localhost # host service
 port: 5000 # port service
-server: flask # option flask or starlette or grpc
+server: flask # option flask or starlette
 wrapper: None # option None or gunicorn
 cors: true
 dump_request: None # None or path folder log request

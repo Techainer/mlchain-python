@@ -15,7 +15,7 @@ real life example using our service.
 ## ML Deployment
 Simple Machine Learning model deployment is the central feature of ML Chain library.
 Our ServeModel function allows user to deploy their model without requiring software engineering knowledge.
-We support Flask and grpc for website hosting.
+We support Flask and starlette for website hosting.
 
 [Read More...](../Model Deployment/general.md)
 
