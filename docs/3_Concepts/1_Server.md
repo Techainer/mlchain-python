@@ -72,7 +72,7 @@ name: mlchain-server # name of service
 entry_file: server.py # python file contains object ServeModel
 host: localhost # host service
 port: 5000 # port service
-server: flask # server option flask or grpc 
+server: flask # server option flask or starlette  
 wrapper: gunicorn # wrapper option None or gunicorn
 gunicorn: # config gunicorn wrapper
   timeout: 60 # max time limit for the server to process
@@ -107,7 +107,7 @@ Port to serve on.
 #### server:
 ```--server STRING```
 
-Type of server to run. Currently we support flask or grpc.
+Type of server to run. Currently we support flask or starlette.
 
 #### wrapper:
 ```--wrapper STRING```

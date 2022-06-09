@@ -8,7 +8,7 @@ host: 0.0.0.0            # Host of service
 port: 8001               # Port service
 
 # Server config 
-server: flask        # Option flask or starlette or grpc
+server: flask        # Option flask or starlette
 wrapper: gunicorn        # Option None or gunicorn
 cors: true               # Auto enable CORS
 cors_allow_origins:      # Allow origins for CORS

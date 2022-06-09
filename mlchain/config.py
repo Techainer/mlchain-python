@@ -6,7 +6,6 @@ import datetime
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 import datetime
-from mlchain.utils.system_info import get_gpu_statistics
 
 class BaseConfig(dict):
     def __init__(self, env_key='', **kwargs):
@@ -162,7 +161,6 @@ def before_send(event, hint):
     if mlconfig.MLCHAIN_SENTRY_DROP_MODULES: 
         event['modules'] = {}
 
-    event['extra']["gpuinfo"] = get_gpu_statistics()
     return event
 
 def init_sentry():

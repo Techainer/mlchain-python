@@ -65,7 +65,6 @@ op_bind = click.option("--bind", "-b", required=False, multiple=True, help="Guni
 op_gunicorn = click.option("--gunicorn", "wrapper", flag_value="gunicorn", help="Run server with gunicorn or not")
 op_flask = click.option("--flask", "server", flag_value="flask", help="Run with Flask server")
 op_starlette = click.option("--starlette", "server", flag_value="starlette", help="Run with Starlette server")
-op_grpc = click.option("--grpc", "server", flag_value="grpc", help="Run with gRPC server")
 op_worker = click.option("--workers", "-w", "workers", default=None, type=int, help="Number of workers")
 op_thread = click.option("--threads", "-t", "threads", default=None, type=int, help="Number of threads")
 op_mode = click.option("--mode", "-m", "mode", default=None, type=str, help="The mode of mlconfig")
@@ -84,7 +83,6 @@ op_preload = click.option('--preload', '-pre', is_flag=True, help="Run worker in
 @op_gunicorn
 @op_flask
 @op_starlette
-@op_grpc
 @op_worker
 @op_thread
 @op_config
@@ -280,25 +278,7 @@ def run_command(
         logger.info("Ngrok url: {0}".format(endpoint))
         os.environ["NGROK_URL"] = endpoint
 
-
-    ############
-    # Run with grpc 
-    ############
-    if server == "grpc":
-        from mlchain.server.grpc_server import GrpcServer
-
-        app = get_model(entry_file, serve_model=True)
-
-        if app is None:
-            raise Exception(
-                "Can not init model class from {0}. Please check mlconfig.yaml or {0} or mlchain run -m {{mode}}!".format(
-                    entry_file
-                )
-            )
-
-        app = GrpcServer(app, name=name)
-        app.run(host, port)
-    elif wrapper == "gunicorn":
+    if wrapper == "gunicorn":
         ############
         # Run with gunicorn 
         ############
@@ -482,7 +462,7 @@ def run_command(
         elif app.__class__.__name__ == "GrpcServer":
             app.run(host, port, debug=debug)
     elif isinstance(app, ServeModel):
-        if server not in ["starlette", "grpc"]:
+        if server != "starlette":
             server = "flask"
         if server == "flask":
             from mlchain.server.flask_server import FlaskServer
@@ -531,13 +511,6 @@ def run_command(
                 threads=threads, 
                 debug=debug
             )
-
-        elif server == "grpc":
-            from mlchain.server.grpc_server import GrpcServer
-
-            app = GrpcServer(app, name=name)
-            app.run(host, port)
-
 
 def get_model(module, serve_model=False):
     """

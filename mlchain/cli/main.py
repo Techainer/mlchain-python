@@ -5,7 +5,6 @@ import sys
 import click
 import flask
 import starlette
-import grpc
 from .init import init_command
 from .run import run_command
 from .artifact import artifact_command

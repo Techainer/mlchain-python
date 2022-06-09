@@ -22,7 +22,7 @@ name: mlchain-server # name of service
 entry_file: server.py # python file contains object ServeModel
 host: localhost # host service
 port: 5000 # port service
-server: flask # option flask or grpc
+server: flask # option flask or starlette
 wrapper: gunicorn # option None or gunicorn
 gunicorn: # config apm-server if uses gunicorn wrapper
   timeout: 60

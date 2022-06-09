@@ -168,7 +168,7 @@ name: Digit-Recognizer # name of service
 entry_file: app.py # python file contains object ServeModel
 host: localhost # host service
 port: 5000 # port
-server: flask # option flask or grpc
+server: flask # option flask or starlette
 wrapper: None # option None or gunicorn
 cors: true
 gunicorn: # config apm-server if uses gunicorn wrapper
