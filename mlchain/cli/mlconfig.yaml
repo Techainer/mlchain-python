@@ -26,7 +26,6 @@ gunicorn:
   threads: 1                    # Number of simultaneous threads in workers
   worker_class: gthread         # The base worker_class, can use gevent (For better IO) or uvicorn.workers.UvicornWorker (starlette - For Async)
   max_requests_jitter: 50       # Restart worker different time 
-  accesslog: mlchain-server.log # Log file for gunicorn
 
 bind:
   - 'unix:/tmp/gunicorn.sock' # Using sock to make gunicorn faster 
