@@ -102,6 +102,11 @@ class MLConfig(BaseConfig):
                         for k, v in data['mode']['env'][mode].items():
                             if k in environ:
                                 data['mode']['env'][mode][k] = environ[k]
+                            if isinstance(v, dict):
+                                for sub_k, sub_v in v.items():
+                                    env_key = f"{k}___{sub_k}"
+                                    if env_key in environ:
+                                        data['mode']['env'][mode][k][sub_k] = environ[env_key]
                         self.update(data['mode']['env'][mode])
 
     def get_client_config(self, name):
@@ -152,6 +157,11 @@ def load_config(data):
                     for k, v in data['mode']['env'][mode].items():
                         if k in environ:
                             data['mode']['env'][mode][k] = environ[k]
+                        if isinstance(v, dict):
+                            for sub_k, sub_v in v.items():
+                                env_key = f"{k}___{sub_k}"
+                                if env_key in environ:
+                                    data['mode']['env'][mode][k][sub_k] = environ[env_key]
                     mlconfig.update(data['mode']['env'][mode])
     
     if (mlconfig.MLCHAIN_SENTRY_DSN is not None and mlconfig.MLCHAIN_SENTRY_DSN != 'None') and data.get('wrapper', None) != 'gunicorn': 
