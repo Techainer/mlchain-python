@@ -1,10 +1,3 @@
-# Fix gevent
-try:
-    from gevent import monkey
-    monkey.patch_all()
-except ImportError:
-    pass
-
 import ssl
 try:
     _create_unverified_https_context = ssl._create_unverified_context
