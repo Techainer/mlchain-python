@@ -1,12 +1,22 @@
-import ssl
-try:
-    _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:
-    # Legacy Python that doesn't verify HTTPS certificates by default
-    pass
-else:
-    # Handle target environment that doesn't support HTTPS verification
-    ssl._create_default_https_context = _create_unverified_https_context
+from os import environ
+
+if "DISABLE_GEVENT_FIX" not in environ:
+    # Fix gevent
+    try:
+        from gevent import monkey
+        monkey.patch_all(thread=False, socket=False)
+    except ImportError:
+        pass
+
+    import ssl
+    try:
+        _create_unverified_https_context = ssl._create_unverified_context
+    except AttributeError:
+        # Legacy Python that doesn't verify HTTPS certificates by default
+        pass
+    else:
+        # Handle target environment that doesn't support HTTPS verification
+        ssl._create_default_https_context = _create_unverified_https_context
 
 # Mlchain Context
 from contextvars import ContextVar

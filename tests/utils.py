@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import os
 from multiprocessing import Process, Queue
 from os import getpid, kill

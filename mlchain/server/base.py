@@ -85,6 +85,7 @@ class MLServer:
         self.converter = Converter()
 
         self.initialize_app()
+        self._swaggered = False
         
     def _check_status(self):
         """
@@ -113,7 +114,9 @@ class MLServer:
         """
         Add Swagger to URL
         """
-        return self._register_swagger()
+        if not self._swaggered:
+            self._register_swagger()
+        self._swaggered = True
 
     def add_endpoint(self, endpoint=None, endpoint_name=None,
                       handler=None, methods=['GET', 'POST']):
@@ -178,7 +181,7 @@ class MLServer:
         self._register_home()
 
         try:
-            self._register_swagger()
+            self.register_swagger()
         except Exception as ex:
             logger.error("Can't register swagger with error {0}".format(ex))
 

@@ -24,6 +24,7 @@ boto3>=1.16.43
 pyyaml>=5.3.1
 sentry-sdk[flask]>=1.5.12
 thefuzz==0.19.0
+python-Levenshtein==0.20.8
 GPUtil==1.4.0
 tqdm
 pyngrok>=5.1.0
