@@ -88,7 +88,7 @@ class AsyncRateLimiter(RateLimiter):
             expect_call_time = self.last_time + self.interval_time - self.average_call_time
             if expect_call_time >= time.time():
                 if self.callback:
-                    asyncio.ensure_future(self.callback(until))
+                    asyncio.ensure_future(self.callback(expect_call_time))
 
                 sleeptime = expect_call_time - time.time()
                 if sleeptime > 0:

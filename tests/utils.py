@@ -1,5 +1,4 @@
 import logging
-import multiprocessing
 import os
 from multiprocessing import Process, Queue
 from os import getpid, kill
@@ -7,9 +6,6 @@ from signal import SIGINT
 from threading import Timer
 from time import sleep
 import time
-
-if os.name != 'nt':
-    multiprocessing.set_start_method("fork")
 
 logger = logging.getLogger()
 

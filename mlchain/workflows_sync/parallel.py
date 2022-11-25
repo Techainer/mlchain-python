@@ -37,6 +37,7 @@ class Parallel:
         max_retries: int = 0,
         pass_fail_job: bool = False,
         verbose: bool = True,
+        threading: bool = True,
     ):
         """
         :tasks: [Task, function] items
@@ -55,7 +56,7 @@ class Parallel:
         elif max_threads == 0:
             max_threads = os.cpu_count()
         self.max_threads = max(0, max_threads)
-
+        self.threading = threading
         self.max_retries = max(max_retries + 1, 1)
         self.pass_fail_job = pass_fail_job
         self.verbose = verbose

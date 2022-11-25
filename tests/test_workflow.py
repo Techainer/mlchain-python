@@ -4,7 +4,8 @@ import unittest
 import os
 import time
 
-from mlchain.workflows import Parallel, Task, Background, Pipeline, Step
+from mlchain.workflows import Parallel, Task, Background
+from mlchain.workflows_sync import Pipeline, Step
 
 logger = logging.getLogger()
 
@@ -117,25 +118,25 @@ class TestWorkflow(unittest.TestCase):
             return n+1
         task = Task(dummy_task, 5)
 
-    # def test_mlchain_pipeline(self):
-    #     def step_1(i):
-    #         time.sleep(0.001)
-    #         return i * 2
+    def test_mlchain_pipeline(self):
+        def step_1(i):
+            time.sleep(0.001)
+            return i * 2
 
-    #     def step_2(i):
-    #         time.sleep(0.001)
-    #         return i * 2
+        def step_2(i):
+            time.sleep(0.001)
+            return i * 2
 
-    #     def step_3(i):
-    #         time.sleep(0.001)
-    #         return i + 1
+        def step_3(i):
+            time.sleep(0.001)
+            return i + 1
 
-    #     pipeline = Pipeline(
-    #         Step(step_1, max_thread = 1),
-    #         Step(step_2, max_thread = 1),
-    #         Step(step_3, max_thread = 1)
-    #     )
-    #     inputs = range(20)
-    #     results = pipeline.run(inputs)
-    #     logger.info("Done pipeline execution. Checking the results")
-    #     assert [x.output[-1].output for x in results] == [1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69, 73, 77]
+        pipeline = Pipeline(
+            Step(step_1, max_thread = 1),
+            Step(step_2, max_thread = 1),
+            Step(step_3, max_thread = 1)
+        )
+        inputs = range(20)
+        results = pipeline.run(inputs)
+        logger.info("Done pipeline execution. Checking the results")
+        assert [x.output[-1] for x in results] == [step_3(step_2(step_1(i))) for i in range(20)]
