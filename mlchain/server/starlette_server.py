@@ -79,6 +79,7 @@ class StarletteEndpointAction:
 
     def init_context(self): 
         uid = str(uuid4())
+        mlchain_context.set_mlchain_context_id(uid)
         mlchain_context['MLCHAIN_CONTEXT_ID'] = uid
         return uid 
 
