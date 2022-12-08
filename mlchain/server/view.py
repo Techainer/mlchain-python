@@ -52,14 +52,16 @@ class View:
         mlchain_context.set(context)
 
         if mlchain_context.MLCHAIN_CONTEXT_ID is None: 
+            mlchain_context.set_mlchain_context_id(context_id)
             mlchain_context['MLCHAIN_CONTEXT_ID'] = context_id 
         else: 
-            context_id = mlchain_context['MLCHAIN_CONTEXT_ID']
+            context_id = mlchain_context.MLCHAIN_CONTEXT_ID
             
         return context_id
 
     def init_context(self): 
         uid = str(uuid4())
+        mlchain_context.set_mlchain_context_id(uid)
         mlchain_context['MLCHAIN_CONTEXT_ID'] = uid
         return uid 
         
