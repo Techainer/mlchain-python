@@ -15,4 +15,4 @@ pymdown-extensions==3.5
 pyparsing==2.1.10
 PyYAML==5.4
 six==1.10.0
-tornado==4.5.1
+tornado==6.3.2
